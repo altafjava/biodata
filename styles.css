@@ -1,0 +1,376 @@
+/* Modern CSS Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Custom Properties */
+:root {
+  --primary-color: #1a237e;
+  --secondary-color: #0d47a1;
+  --accent-color: #2962ff;
+  --text-color: #263238;
+  --light-bg: #f5f7fa;
+  --card-bg: #ffffff;
+  --success-color: #00c853;
+  --gradient-start: var(--accent-color);
+  --gradient-end: #d90e5f;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Base Styles */
+body {
+  font-family: "Poppins", "Segoe UI", sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  /* background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end)); */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card-bg);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header Styles */
+header {
+  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  color: white;
+  padding: 25px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.1)"/></svg>');
+  opacity: 0.1;
+}
+
+h1 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.profile-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 5px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.subtitle {
+  font-size: 1rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.quick-info {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.quick-info span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Section Styles */
+section {
+  margin: 12px;
+  padding: 15px;
+  background: var(--card-bg);
+  border-radius: 15px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-color);
+}
+
+h3 {
+  color: var(--primary-color);
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+h3 i {
+  color: var(--accent-color);
+  font-size: 1.1rem;
+}
+
+/* Personal Information Styles */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.info-item {
+  background: var(--light-bg);
+  padding: 8px;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.info-item:hover {
+  transform: translateY(-2px);
+}
+
+.label {
+  font-weight: 500;
+  color: var(--primary-color);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.value {
+  color: var(--text-color);
+  font-size: 0.9rem;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Habits Section */
+.habits {
+  margin-top: 12px;
+}
+
+.habits h4 {
+  margin-bottom: 10px;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.habits-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.habit-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--light-bg);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.habit-item i {
+  color: var(--success-color);
+  font-size: 0.9rem;
+}
+
+/* Academic Profile Styles */
+.education-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.education-item {
+  display: flex;
+  font-size: 0.9rem;
+  gap: 12px;
+  padding: 10px;
+  background: var(--light-bg);
+  border-radius: 8px;
+  position: relative;
+  transition: transform 0.2s;
+}
+
+.education-item:hover {
+  transform: translateX(5px);
+}
+
+.year {
+  font-weight: 600;
+  color: var(--accent-color);
+  min-width: 45px;
+  font-size: 0.85rem;
+}
+
+.details h4 {
+  color: var(--primary-color);
+  margin-bottom: 3px;
+  font-size: 0.9rem;
+}
+
+.percentage {
+  color: var(--success-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Family Background Styles */
+.family-info {
+  display: grid;
+  gap: 12px;
+}
+
+.parents-row {
+  display: grid;
+  /* grid-template-columns: repeat(2); */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.siblings-row {
+  display: grid;
+  /* grid-template-columns: repeat(2 ); */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.family-member {
+  font-size: 0.9rem;
+  padding: 10px;
+  background: var(--light-bg);
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.family-member:hover {
+  transform: translateY(-2px);
+}
+
+.family-member h4 {
+  color: var(--primary-color);
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.occupation {
+  color: var(--accent-color);
+  font-size: 0.8rem;
+}
+
+.siblings {
+  margin-top: 12px;
+}
+
+.sibling-item {
+  font-size: 0.9rem;
+  padding: 10px;
+  background: var(--light-bg);
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.sibling-item:hover {
+  transform: translateY(-2px);
+}
+
+.sibling-item h5 {
+  color: var(--primary-color);
+  margin-bottom: 3px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.qualification {
+  color: var(--accent-color);
+  font-size: 0.8rem;
+  margin-top: 3px;
+}
+
+.status {
+  color: var(--success-color);
+  font-size: 0.8rem;
+  margin-top: 3px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    border-radius: 15px;
+  }
+
+  header {
+    padding: 20px 15px;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+  }
+
+  .profile-header h2 {
+    font-size: 1.6rem;
+  }
+
+  section {
+    margin: 8px;
+    padding: 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .parents-row {
+    grid-template-columns: 1fr;
+  }
+
+  .siblings-row {
+    grid-template-columns: 1fr;
+  }
+}
