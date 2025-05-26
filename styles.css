@@ -14,6 +14,7 @@
   --light-bg: #f5f7fa;
   --card-bg: #ffffff;
   --success-color: #00c853;
+  --married-color: #FF69B4;
   --gradient-start: var(--accent-color);
   --gradient-end: #d90e5f;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -34,7 +35,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 480px;
+  max-width: 540px;
   background: var(--card-bg);
   border-radius: 20px;
   box-shadow: var(--shadow);
@@ -174,7 +175,7 @@ h3 i {
 
 /* Habits Section */
 .habits {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .habits h4 {
@@ -330,7 +331,7 @@ h3 i {
 }
 
 .status {
-  color: var(--success-color);
+  color: var(--married-color);
   font-size: 0.8rem;
   margin-top: 3px;
   font-weight: 500;
