@@ -83,6 +83,10 @@ h1 {
   opacity: 0.9;
   font-weight: 300;
 }
+.subtitle .company {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
 
 .quick-info {
   display: flex;
