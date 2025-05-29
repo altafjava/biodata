@@ -14,7 +14,7 @@
   --light-bg: #f5f7fa;
   --card-bg: #ffffff;
   --success-color: #00c853;
-  --married-color: #FF69B4;
+  --married-color: #ff69b4;
   --gradient-start: var(--accent-color);
   --gradient-end: #d90e5f;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -101,6 +101,33 @@ h1 {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-decoration: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.social-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  color: white;
+}
+
+.social-link i {
+  font-size: 1.1rem;
+  pointer-events: none;
 }
 
 /* Section Styles */
