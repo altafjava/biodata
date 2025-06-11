@@ -130,6 +130,43 @@ h1 {
   pointer-events: none;
 }
 
+.contact-info {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+  /* flex-wrap: wrap; */
+  flex-wrap: nowrap;
+}
+
+.contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  text-decoration: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-size: 0.9rem;
+  z-index: 1;
+  white-space: nowrap; /* Prevent text wrapping */
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+.contact-link:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  color: white;
+}
+
+.contact-link i {
+  font-size: 1rem;
+}
+
 /* Section Styles */
 section {
   margin: 12px;
@@ -405,4 +442,26 @@ h3 i {
   .siblings-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Toast Notification Styles */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  font-size: 14px;
+  z-index: 1000;
+  opacity: 0;
+  transition: all 0.3s ease-in-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
 }
