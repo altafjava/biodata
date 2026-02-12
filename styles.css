@@ -35,7 +35,7 @@ body {
 
 .container {
   width: 100%;
-  max-width: 540px;
+  max-width: 640px;
   background: var(--card-bg);
   border-radius: 20px;
   box-shadow: var(--shadow);
@@ -269,6 +269,33 @@ h3 i {
 
 .habit-item i {
   color: var(--success-color);
+  font-size: 0.9rem;
+}
+
+/* Interests Section - Same styling as Habits */
+.interests-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.interest-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--light-bg);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+
+.interest-item:hover {
+  transform: translateY(-2px);
+}
+
+.interest-item i {
+  color: var(--accent-color);
   font-size: 0.9rem;
 }
 
