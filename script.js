@@ -1,5 +1,5 @@
 function openWhatsApp(event) {
-  const phone = "917995504416";
+  const phone = "918341949651";
   const message = "Hi, I just viewed your biodata at https://altafjava.github.io/biodata/. I'd like to connect and learn more if you're open to it.";
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank");
@@ -11,7 +11,7 @@ function isMobileDevice() {
 }
 
 function handlePhoneClick(event) {
-  const phoneNumber = "+917995504416";
+  const phoneNumber = "+918341949651";
   if (isMobileDevice()) {
     window.location.href = `tel:${phoneNumber}`; // For mobile devices, open phone dialer
   } else {
