@@ -1,12 +1,40 @@
 // ============================================================
 //  Admin Panel JS — analytics/admin.js
 // ============================================================
-function waitForConfig(cb) {
-  if (window.ANALYTICS_CONFIG) return cb(window.ANALYTICS_CONFIG);
-  setTimeout(() => waitForConfig(cb), 50);
+
+function showFatalError(msg) {
+  const gate = document.getElementById('gate');
+  const icon = document.getElementById('gate-icon');
+  const heading = document.getElementById('gate-heading');
+  const gateMsg = document.getElementById('gate-msg');
+  if (gate)    { gate.classList.remove('hidden'); }
+  if (icon)    { icon.style.animation = 'none'; icon.textContent = '⚠️'; }
+  if (heading) { heading.textContent = 'Load Error'; heading.style.opacity = '1'; }
+  if (gateMsg) { gateMsg.textContent = msg; gateMsg.style.color = '#f87171'; gateMsg.style.fontSize = '13px'; gateMsg.style.marginTop = '8px'; }
+  document.getElementById('app').classList.add('hidden');
 }
 
-waitForConfig(function (cfg) {
+function waitForConfig(cb, n) {
+  n = n || 0;
+  if (window.ANALYTICS_CONFIG) return cb(window.ANALYTICS_CONFIG);
+  if (n > 100) return showFatalError('config.js failed to load. Check the file path.');
+  setTimeout(function() { waitForConfig(cb, n + 1); }, 50);
+}
+
+function waitForChart(cb, n) {
+  n = n || 0;
+  if (window.Chart) return cb();
+  if (n > 120) return showFatalError('Chart.js failed to load from both CDNs. Check internet connection.');
+  setTimeout(function() { waitForChart(cb, n + 1); }, 50);
+}
+
+waitForConfig(function(cfg) {
+  waitForChart(function() {
+    initAdmin(cfg);
+  });
+});
+
+function initAdmin(cfg) {
   const SECRET_KEY   = cfg.adminSecret;
   const SUPABASE_URL = cfg.supabaseUrl;
   const SUPABASE_KEY = cfg.supabaseKey;
@@ -19,18 +47,9 @@ waitForConfig(function (cfg) {
   Chart.defaults.font.family = "'Poppins',sans-serif";
   Chart.defaults.font.size   = 11;
 
-  // Distinct, accessible color palette — visually very different from each other
   const P = [
-    '#4f46e5', // indigo
-    '#ef4444', // red
-    '#10b981', // emerald
-    '#f59e0b', // amber
-    '#06b6d4', // cyan
-    '#8b5cf6', // violet
-    '#f97316', // orange
-    '#14b8a6', // teal
-    '#ec4899', // pink
-    '#84cc16', // lime
+    '#4f46e5','#ef4444','#10b981','#f59e0b','#06b6d4',
+    '#8b5cf6','#f97316','#14b8a6','#ec4899','#84cc16',
   ];
 
   // ── Access Gate ────────────────────────────────────────────
@@ -41,22 +60,93 @@ waitForConfig(function (cfg) {
       document.getElementById('app').classList.remove('hidden');
       loadData();
     } else {
+      const icon    = document.getElementById('gate-icon');
+      const heading = document.getElementById('gate-heading');
+      if (icon)    { icon.style.animation='none'; icon.textContent='🔐'; }
+      if (heading) { heading.textContent='Access Restricted'; heading.style.opacity='1'; heading.style.fontWeight='700'; }
       document.getElementById('gate').classList.remove('hidden');
       document.getElementById('app').classList.add('hidden');
     }
   }
 
-  // ── Fetch ──────────────────────────────────────────────────
+  // ── Fetch with timeout + IPv6 retry via proxy ───────────────
+  function abortFetch(url, opts, ms) {
+    const controller = window.AbortController ? new AbortController() : null;
+    const timer = controller ? setTimeout(function() { controller.abort(); }, ms) : null;
+    const fetchOpts = controller ? Object.assign({}, opts, { signal: controller.signal }) : opts;
+    return fetch(url, fetchOpts).finally(function() { if (timer) clearTimeout(timer); });
+  }
+
+  // Tries direct fetch first (8s), then falls back to corsproxy.io (for IPv6-only devices)
+  async function robustFetch(url, opts) {
+    try {
+      const res = await abortFetch(url, opts, 8000);
+      return res;
+    } catch (e1) {
+      // Direct failed (likely IPv6 timeout) — try CORS proxy as fallback
+      console.warn('[Analytics] Direct fetch failed, trying proxy fallback:', e1.message);
+      const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+      // Proxy doesn't forward custom headers well, so we embed key in URL for GET only
+      // For Supabase, we can pass apikey as query param
+      const proxyUrlWithKey = proxyUrl.replace(
+        encodeURIComponent(SUPABASE_URL),
+        encodeURIComponent(SUPABASE_URL)
+      );
+      try {
+        const res2 = await abortFetch(proxyUrlWithKey, {}, 12000);
+        return res2;
+      } catch (e2) {
+        throw new Error('Direct: ' + e1.message + ' | Proxy: ' + e2.message);
+      }
+    }
+  }
+
+  // Supabase-specific fetch: direct with key headers, proxy fallback strips headers so use apikey param
+  async function supabaseFetch(path, opts) {
+    const fullUrl = SUPABASE_URL + path;
+    const headers = Object.assign({ apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }, (opts && opts.headers) || {});
+
+    // Try 1: Direct
+    try {
+      const res = await abortFetch(fullUrl, Object.assign({}, opts, { headers }), 9000);
+      return res;
+    } catch (e1) {
+      console.warn('[Analytics] Supabase direct failed (' + e1.message + '), trying proxy...');
+    }
+
+    // Try 2: corsproxy.io (works on IPv6-only networks since proxy has IPv4)
+    try {
+      const proxied = 'https://corsproxy.io/?' + encodeURIComponent(fullUrl);
+      const res = await abortFetch(proxied, Object.assign({}, opts, { headers }), 12000);
+      return res;
+    } catch (e2) {
+      console.warn('[Analytics] corsproxy.io failed (' + e2.message + '), trying allorigins...');
+    }
+
+    // Try 3: api.allorigins.win (second proxy fallback, GET only)
+    if (!opts || !opts.method || opts.method === 'GET') {
+      try {
+        const proxied2 = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(fullUrl);
+        const res = await abortFetch(proxied2, {}, 12000);
+        return res;
+      } catch (e3) {
+        throw new Error('All fetch attempts failed. IPv6 network cannot reach Supabase.');
+      }
+    }
+
+    throw new Error('All fetch attempts failed. IPv6 network cannot reach Supabase.');
+  }
+
   async function fetchVisits(period) {
-    let url = `${SUPABASE_URL}/rest/v1/${TABLE_NAME}?select=*&order=visited_at.desc`;
+    let path = `/rest/v1/${TABLE_NAME}?select=*&order=visited_at.desc`;
     if (period === 'today') {
       const t = new Date(); t.setHours(0,0,0,0);
-      url += `&visited_at=gte.${t.toISOString()}`;
+      path += `&visited_at=gte.${t.toISOString()}`;
     } else if (period !== 'all') {
-      url += `&visited_at=gte.${new Date(Date.now()-parseInt(period)*86400000).toISOString()}`;
+      path += `&visited_at=gte.${new Date(Date.now()-parseInt(period)*86400000).toISOString()}`;
     }
-    url += `&limit=5000`;
-    const res = await fetch(url, { headers:{"apikey":SUPABASE_KEY,"Authorization":`Bearer ${SUPABASE_KEY}`} });
+    path += `&limit=5000`;
+    const res = await supabaseFetch(path, { headers:{} });
     if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
     return res.json();
   }
@@ -125,7 +215,6 @@ waitForConfig(function (cfg) {
               boxWidth:10, padding:14,
               font:{size:11},
               generateLabels: function(chart) {
-                // Show count in legend
                 const data = chart.data;
                 return data.labels.map((label, i) => ({
                   text: `${label}  (${data.datasets[0].data[i]})`,
@@ -169,8 +258,7 @@ waitForConfig(function (cfg) {
     const avgScrl   = scrls.length?Math.round(scrls.reduce((a,b)=>a+b,0)/scrls.length):0;
     const todayCnt  = rows.filter(r=>new Date(r.visited_at).toDateString()===new Date().toDateString()).length;
     const convRate  = unique?Math.round(contacted/unique*100):0;
-
-    const gpsCnt = rows.filter(r=>r.gps_granted).length;
+    const gpsCnt    = rows.filter(r=>r.gps_granted).length;
 
     countUp(document.getElementById('stat-total'),  total);
     countUp(document.getElementById('stat-unique'), unique);
@@ -183,12 +271,10 @@ waitForConfig(function (cfg) {
     document.getElementById('stat-avgtime').textContent    = fmtDur(avgDur);
     document.getElementById('stat-scroll').textContent     = avgScrl?`${avgScrl}%`:'—';
     document.getElementById('stat-gps-pct').textContent    = unique?`${Math.round(gpsCnt/unique*100)}% of visitors`:'of visitors';
-    // Conversion banner
     document.getElementById('cb-rate').textContent         = `${convRate}%`;
     const cbRate2 = document.getElementById('cb-rate2');
     if(cbRate2) cbRate2.textContent = `${convRate}%`;
 
-    // Timeline
     const byDay={};
     rows.forEach(r=>{
       const d=new Date(r.visited_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
@@ -197,21 +283,18 @@ waitForConfig(function (cfg) {
     const days=Object.keys(byDay);
     makeChart('chart-timeline','line',days,days.map(k=>byDay[k]));
 
-    // Referrer
     const refs=countBy(rows,'referrer').slice(0,6);
     makeChart('chart-referrer','doughnut',refs.map(r=>r[0]),refs.map(r=>r[1]));
 
-    // Source
     const srcData=[['WhatsApp',waCnt],['Phone',phCnt],['No contact',total-waCnt-phCnt]].filter(s=>s[1]>0);
     makeChart('chart-source','doughnut',srcData.map(s=>s[0]),srcData.map(s=>s[1]));
 
-    // Hour heatmap
     const hours=Array(24).fill(0);
     rows.forEach(r=>{hours[new Date(r.visited_at).getHours()]++;});
     makeChart('chart-hours','bar',Array.from({length:24},(_,i)=>i+':00'),hours);
   }
 
-  // ── Visitors Table — simplified summary + expandable detail modal ──
+  // ── Visitors Table ─────────────────────────────────────────
   let expandedSessions = new Set();
 
   function renderTable(rows) {
@@ -222,7 +305,6 @@ waitForConfig(function (cfg) {
       return;
     }
 
-    // Group by session_id
     const sessionMap = new Map();
     rows.forEach(r => {
       if (!sessionMap.has(r.session_id)) sessionMap.set(r.session_id, []);
@@ -247,17 +329,13 @@ waitForConfig(function (cfg) {
       const count    = sessionRows.length;
       const isExpanded = expandedSessions.has(sessionId);
 
-      // Best values across all visits
       const bestSource = sessionRows.find(r=>r.source==='whatsapp')?.source
         || sessionRows.find(r=>r.source==='phone')?.source || 'none';
       const totalDur  = sessionRows.reduce((s,r)=>s+(r.duration_seconds||0),0);
       const maxScroll = Math.max(...sessionRows.map(r=>r.scroll_depth_pct||0));
       const gpsRow    = sessionRows.find(r=>r.gps_granted);
+      const location  = [latest.city, latest.country].filter(Boolean).join(', ') || '—';
 
-      // Location: prefer GPS city if available, else IP city
-      const location = [latest.city, latest.country].filter(Boolean).join(', ') || '—';
-
-      // Summary row — only essential columns
       html += `<tr class="session-row${isExpanded?' session-expanded':''}" data-session="${sessionId}">
         <td class="mono muted">${idx}</td>
         <td class="mono sm">${fmtDate(latest.visited_at, true)}</td>
@@ -275,7 +353,6 @@ waitForConfig(function (cfg) {
         </td>
       </tr>`;
 
-      // Expanded detail card — shown as a full-width row beneath summary
       if (isExpanded) {
         const allVisitsHtml = sessionRows.map((r,i) => `
           <div class="detail-visit">
@@ -296,66 +373,22 @@ waitForConfig(function (cfg) {
             <div class="detail-card">
               <div class="detail-section">
                 <div class="detail-grid">
-                  <div class="detail-col">
-                    <div class="dc-label">IPv4</div>
-                    <div class="dc-value mono">${latest.ipv4||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">IPv6</div>
-                    <div class="dc-value mono small">${latest.ipv6||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">City</div>
-                    <div class="dc-value">${latest.city||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">Region</div>
-                    <div class="dc-value">${latest.region||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">Country</div>
-                    <div class="dc-value">${latest.country||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">ISP</div>
-                    <div class="dc-value">${latest.isp||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">OS</div>
-                    <div class="dc-value">${latest.os||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">Language</div>
-                    <div class="dc-value">${latest.language||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">Screen</div>
-                    <div class="dc-value mono">${latest.screen_resolution||'—'}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">Timezone</div>
-                    <div class="dc-value">${latest.timezone||'—'}</div>
-                  </div>
+                  <div class="detail-col"><div class="dc-label">IPv4</div><div class="dc-value mono">${latest.ipv4||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">IPv6</div><div class="dc-value mono small">${latest.ipv6||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">City</div><div class="dc-value">${latest.city||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">Region</div><div class="dc-value">${latest.region||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">Country</div><div class="dc-value">${latest.country||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">ISP</div><div class="dc-value">${latest.isp||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">OS</div><div class="dc-value">${latest.os||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">Language</div><div class="dc-value">${latest.language||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">Screen</div><div class="dc-value mono">${latest.screen_resolution||'—'}</div></div>
+                  <div class="detail-col"><div class="dc-label">Timezone</div><div class="dc-value">${latest.timezone||'—'}</div></div>
                   ${gpsRow ? `
-                  <div class="detail-col">
-                    <div class="dc-label">GPS Lat/Lng</div>
-                    <div class="dc-value mono">${gpsRow.gps_lat?.toFixed(5)}, ${gpsRow.gps_lng?.toFixed(5)}</div>
-                  </div>
-                  <div class="detail-col">
-                    <div class="dc-label">GPS Accuracy</div>
-                    <div class="dc-value mono">±${gpsRow.gps_accuracy}m</div>
-                  </div>
-                  ${gpsRow.gps_lat ? `<div class="detail-col detail-col-full">
-                    <a class="map-link" href="https://maps.google.com/?q=${gpsRow.gps_lat},${gpsRow.gps_lng}" target="_blank">📍 Open in Google Maps</a>
-                  </div>` : ''}` : ''}
-                  <div class="detail-col">
-                    <div class="dc-label">Referrer</div>
-                    <div class="dc-value">${latest.referrer||'—'}</div>
-                  </div>
-                  <div class="detail-col detail-col-full">
-                    <div class="dc-label">Page URL</div>
-                    <div class="dc-value mono small">${latest.page_url||'—'}</div>
-                  </div>
+                  <div class="detail-col"><div class="dc-label">GPS Lat/Lng</div><div class="dc-value mono">${gpsRow.gps_lat?.toFixed(5)}, ${gpsRow.gps_lng?.toFixed(5)}</div></div>
+                  <div class="detail-col"><div class="dc-label">GPS Accuracy</div><div class="dc-value mono">±${gpsRow.gps_accuracy}m</div></div>
+                  ${gpsRow.gps_lat ? `<div class="detail-col detail-col-full"><a class="map-link" href="https://maps.google.com/?q=${gpsRow.gps_lat},${gpsRow.gps_lng}" target="_blank">📍 Open in Google Maps</a></div>` : ''}` : ''}
+                  <div class="detail-col"><div class="dc-label">Referrer</div><div class="dc-value">${latest.referrer||'—'}</div></div>
+                  <div class="detail-col detail-col-full"><div class="dc-label">Page URL</div><div class="dc-value mono small">${latest.page_url||'—'}</div></div>
                 </div>
               </div>
               <div class="detail-section">
@@ -369,7 +402,6 @@ waitForConfig(function (cfg) {
     });
 
     tbody.innerHTML = html;
-
     tbody.querySelectorAll('.session-row').forEach(row => {
       row.addEventListener('click', () => {
         const sid = row.dataset.session;
@@ -410,7 +442,8 @@ waitForConfig(function (cfg) {
   let allRows=[];
   async function loadData() {
     const period=document.getElementById('date-filter').value;
-    document.getElementById('visits-tbody').innerHTML='<tr><td colspan="10" class="empty-cell">Loading…</td></tr>';
+    document.getElementById('visits-tbody').innerHTML=
+      '<tr><td colspan="10" class="empty-cell">⏳ Loading… (may take a few seconds on mobile networks)</td></tr>';
     try {
       allRows=await fetchVisits(period);
       expandedSessions.clear();
@@ -423,7 +456,11 @@ waitForConfig(function (cfg) {
     } catch(e) {
       document.getElementById('visits-tbody').innerHTML=
         `<tr><td colspan="10" class="empty-cell" style="color:#e11d48">
-          Error: ${e.message}<br><small style="color:var(--muted)">Check config.js</small>
+          <strong>${e.message}</strong><br>
+          <small style="color:var(--muted)">
+            IPv6-only networks (Jio/Airtel 5G) may not reach Supabase.<br>
+            Try switching to WiFi or 4G and refresh.
+          </small>
         </td></tr>`;
     }
   }
@@ -466,4 +503,4 @@ waitForConfig(function (cfg) {
 
   checkAccess();
   window.addEventListener('hashchange',checkAccess);
-});
+} // end initAdmin

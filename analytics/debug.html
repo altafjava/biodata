@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Debug — Biodata Analytics</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f1221; color: #e2e8f0; padding: 16px; font-size: 14px; }
+    h1 { color: #fff; font-size: 1.2rem; margin-bottom: 4px; }
+    .subtitle { color: #64748b; font-size: 12px; margin-bottom: 16px; }
+
+    .card { background: #1e2235; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid #2d3452; }
+    .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; margin-bottom: 10px; }
+
+    .test { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2d3452; }
+    .test:last-child { border-bottom: none; }
+    .test-icon { font-size: 16px; width: 22px; flex-shrink: 0; margin-top: 1px; }
+    .test-body { flex: 1; min-width: 0; }
+    .test-name { font-weight: 600; font-size: 13px; color: #e2e8f0; }
+    .test-detail { font-size: 11px; color: #94a3b8; margin-top: 3px; word-break: break-all; font-family: monospace; }
+    .test-detail.err { color: #f87171; }
+    .test-detail.ok  { color: #34d399; }
+    .test-detail.warn { color: #fbbf24; }
+
+    .status { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+    .status.pass { background: #064e3b; color: #34d399; }
+    .status.fail { background: #450a0a; color: #f87171; }
+    .status.warn { background: #451a03; color: #fbbf24; }
+    .status.running { background: #1e3a5f; color: #60a5fa; }
+
+    .summary { background: #1e2235; border-radius: 12px; padding: 16px; border: 2px solid #4f46e5; margin-bottom: 12px; }
+    .summary-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .summary-body { font-size: 13px; color: #94a3b8; line-height: 1.7; }
+
+    .copy-btn {
+      display: block; width: 100%; padding: 12px;
+      background: #4f46e5; color: #fff; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 12px;
+      font-family: inherit;
+    }
+    .copy-btn:active { background: #4338ca; }
+
+    .raw { background: #0a0d1a; border-radius: 10px; padding: 12px; font-family: monospace; font-size: 11px; color: #94a3b8; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto; }
+
+    #progress { color: #60a5fa; font-size: 12px; margin-bottom: 8px; }
+    .spinner { display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .section-hdr { color: #4f46e5; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; margin: 16px 0 6px; }
+  </style>
+</head>
+<body>
+
+<h1>🔍 Analytics Debug</h1>
+<p class="subtitle">Runs all checks and shows exactly what's failing on this device/network.</p>
+
+<div id="progress"><span class="spinner">⟳</span> Running tests…</div>
+
+<div id="summary" class="summary" style="display:none">
+  <div class="summary-title" id="summary-title"></div>
+  <div class="summary-body" id="summary-body"></div>
+</div>
+
+<button class="copy-btn" onclick="copyReport()">📋 Copy Full Report (share with developer)</button>
+
+<div class="section-hdr">📱 Device & Browser</div>
+<div class="card">
+  <div id="tests-device"></div>
+</div>
+
+<div class="section-hdr">📜 Script Loading</div>
+<div class="card">
+  <div id="tests-scripts"></div>
+</div>
+
+<div class="section-hdr">🌐 Network & API</div>
+<div class="card">
+  <div id="tests-network"></div>
+</div>
+
+<div class="section-hdr">🗄️ Supabase</div>
+<div class="card">
+  <div id="tests-supabase"></div>
+</div>
+
+<div class="section-hdr">📋 Raw Report</div>
+<div class="raw" id="raw-report">Generating…</div>
+
+<!-- Load the actual config so we can test with real values -->
+<script src="config.js"></script>
+
+<script>
+// ── Helpers ────────────────────────────────────────────────────────
+const report = [];
+const results = { pass: 0, fail: 0, warn: 0 };
+
+function log(section, name, status, detail, detailClass) {
+  const container = document.getElementById('tests-' + section);
+  if (!container) return;
+  const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : status === 'warn' ? '⚠️' : '🔵';
+  const statusClass = status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : status === 'warn' ? 'warn' : 'running';
+  if (status !== 'running') results[status] = (results[status] || 0) + 1;
+  container.innerHTML += `
+    <div class="test">
+      <div class="test-icon">${icon}</div>
+      <div class="test-body">
+        <div class="test-name">${name} <span class="status ${statusClass}">${status.toUpperCase()}</span></div>
+        ${detail ? `<div class="test-detail ${detailClass||''}">${detail}</div>` : ''}
+      </div>
+    </div>`;
+  report.push(`[${status.toUpperCase()}] ${name}${detail ? ': ' + detail : ''}`);
+}
+
+function updateRaw() {
+  document.getElementById('raw-report').textContent = report.join('\n');
+}
+
+function copyReport() {
+  const text = report.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => alert('Copied! Share this with your developer.'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Copied! Share this with your developer.');
+  }
+}
+
+function fetchWithTimeout(url, opts, timeout) {
+  timeout = timeout || 8000;
+  return Promise.race([
+    fetch(url, opts),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout after ' + timeout + 'ms')), timeout))
+  ]);
+}
+
+// ── DEVICE TESTS ──────────────────────────────────────────────────
+function runDeviceTests() {
+  const ua = navigator.userAgent;
+  const isHttps = location.protocol === 'https:';
+  const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+  log('device', 'User Agent', 'pass', ua);
+  log('device', 'URL', 'pass', location.href);
+  log('device', 'Protocol', isHttps || isLocalhost ? 'pass' : 'warn',
+    location.protocol + '//' + location.host,
+    isHttps || isLocalhost ? 'ok' : 'warn');
+  log('device', 'Screen Resolution', 'pass', screen.width + 'x' + screen.height + ' (devicePixelRatio: ' + (window.devicePixelRatio || 1) + ')');
+  log('device', 'Language', 'pass', navigator.language || 'unknown');
+  log('device', 'Online Status', navigator.onLine ? 'pass' : 'fail',
+    navigator.onLine ? 'Device reports online' : 'Device reports OFFLINE', navigator.onLine ? 'ok' : 'err');
+  log('device', 'localStorage', (function() {
+    try { localStorage.setItem('_dbg', '1'); localStorage.removeItem('_dbg'); return true; } catch(e) { return false; }
+  })() ? 'pass' : 'warn', '');
+  log('device', 'Fetch API', typeof fetch !== 'undefined' ? 'pass' : 'fail',
+    typeof fetch !== 'undefined' ? 'Available' : 'NOT AVAILABLE — old browser', typeof fetch !== 'undefined' ? 'ok' : 'err');
+  log('device', 'Promise', typeof Promise !== 'undefined' ? 'pass' : 'fail',
+    typeof Promise !== 'undefined' ? 'Available' : 'NOT AVAILABLE');
+}
+
+// ── SCRIPT TESTS ──────────────────────────────────────────────────
+function runScriptTests() {
+  // Test 1: config.js loaded?
+  if (window.ANALYTICS_CONFIG) {
+    log('scripts', 'config.js loaded', 'pass', 'window.ANALYTICS_CONFIG exists', 'ok');
+    const cfg = window.ANALYTICS_CONFIG;
+    const urlOk = cfg.supabaseUrl && !cfg.supabaseUrl.includes('YOUR_');
+    const keyOk = cfg.supabaseKey && !cfg.supabaseKey.includes('YOUR_');
+    log('scripts', 'Supabase URL in config', urlOk ? 'pass' : 'fail',
+      urlOk ? cfg.supabaseUrl : 'Missing or placeholder!', urlOk ? 'ok' : 'err');
+    log('scripts', 'Supabase Key in config', keyOk ? 'pass' : 'fail',
+      keyOk ? cfg.supabaseKey.substring(0, 30) + '…' : 'Missing or placeholder!', keyOk ? 'ok' : 'err');
+    log('scripts', 'Admin Secret', cfg.adminSecret ? 'pass' : 'warn',
+      cfg.adminSecret ? '"' + cfg.adminSecret + '"' : 'Not set');
+    log('scripts', 'Table Name', 'pass', cfg.tableName || 'visits (default)');
+  } else {
+    log('scripts', 'config.js loaded', 'fail', 'window.ANALYTICS_CONFIG is undefined — config.js did NOT load or has a JS error!', 'err');
+  }
+
+  // Test 2: Chart.js loaded?
+  if (window.Chart) {
+    log('scripts', 'Chart.js loaded', 'pass', 'Chart v' + (Chart.version || '?'), 'ok');
+  } else {
+    log('scripts', 'Chart.js loaded', 'fail', 'Chart is undefined — CDN not yet loaded (timing issue) OR CDN truly blocked. If Cloudflare CDN test below passes, this is just a load-order race condition fixed in admin.html.', 'err');
+  }
+}
+
+// ── NETWORK TESTS ─────────────────────────────────────────────────
+async function runNetworkTests() {
+  // Test basic internet
+  try {
+    const r = await fetchWithTimeout('https://httpbin.org/get', {}, 6000);
+    log('network', 'Basic HTTPS fetch (httpbin.org)', r.ok ? 'pass' : 'warn',
+      'Status: ' + r.status, r.ok ? 'ok' : 'warn');
+  } catch(e) {
+    log('network', 'Basic HTTPS fetch (httpbin.org)', 'fail', e.message, 'err');
+  }
+
+  // Test Cloudflare CDN (where Chart.js comes from)
+  try {
+    const r = await fetchWithTimeout('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js', {method:'HEAD'}, 6000);
+    log('network', 'Cloudflare CDN reachable (Chart.js source)', r.ok ? 'pass' : 'warn',
+      'Status: ' + r.status, r.ok ? 'ok' : 'warn');
+  } catch(e) {
+    log('network', 'Cloudflare CDN reachable (Chart.js source)', 'fail',
+      e.message + ' ← THIS explains why Chart.js may not load!', 'err');
+  }
+
+  // Test Google Fonts (used in admin.html)
+  try {
+    const r = await fetchWithTimeout('https://fonts.googleapis.com', {method:'HEAD'}, 5000);
+    log('network', 'Google Fonts reachable', r.ok || r.status === 301 || r.status === 200 ? 'pass' : 'warn',
+      'Status: ' + r.status);
+  } catch(e) {
+    log('network', 'Google Fonts reachable', 'warn', e.message + ' (non-critical)', 'warn');
+  }
+
+  // Test ipapi.co (used for geo in biodata.js)
+  try {
+    const r = await fetchWithTimeout('https://ipapi.co/json/', {}, 8000);
+    const d = await r.json();
+    if (d.error) {
+      log('network', 'ipapi.co (geo API)', 'warn', 'Responded but error: ' + d.reason, 'warn');
+    } else {
+      log('network', 'ipapi.co (geo API)', 'pass',
+        'IP: ' + d.ip + ' | City: ' + (d.city || '?') + ' | Country: ' + (d.country_name || '?'), 'ok');
+    }
+  } catch(e) {
+    log('network', 'ipapi.co (geo API)', 'warn', e.message + ' (non-critical, geo just wont be saved)', 'warn');
+  }
+
+  updateRaw();
+}
+
+// ── SUPABASE TESTS ────────────────────────────────────────────────
+async function runSupabaseTests() {
+  if (!window.ANALYTICS_CONFIG) {
+    log('supabase', 'Supabase tests', 'fail', 'Skipped — config.js not loaded', 'err');
+    updateRaw();
+    finalize();
+    return;
+  }
+
+  const cfg = window.ANALYTICS_CONFIG;
+  const url = cfg.supabaseUrl;
+  const key = cfg.supabaseKey;
+  const table = cfg.tableName || 'visits';
+
+  if (!url || url.includes('YOUR_') || !key || key.includes('YOUR_')) {
+    log('supabase', 'Supabase config values', 'fail', 'URL or key not set in config.js', 'err');
+    finalize();
+    return;
+  }
+
+  // Test 1: REST API read (bare domain HEAD is CORS-blocked; must use /rest/v1/)
+  try {
+    const r = await fetchWithTimeout(
+      url + '/rest/v1/' + table + '?select=id&limit=1',
+      { headers: { apikey: key, Authorization: 'Bearer ' + key } },
+      12000
+    );
+    const body = await r.text();
+    if (r.ok) {
+      log('supabase', 'Supabase REST API reachable + key valid', 'pass',
+        'Status ' + r.status + ' — connection OK, anon key accepted', 'ok');
+      try {
+        const json = JSON.parse(body);
+        log('supabase', 'Table "' + table + '" readable (SELECT)', 'pass',
+          'Got ' + json.length + ' row(s) — RLS allows anon select', 'ok');
+      } catch(pe) {
+        log('supabase', 'Response parse', 'warn', 'Not JSON: ' + body.substring(0, 100), 'warn');
+      }
+    } else if (r.status === 401 || r.status === 403) {
+      log('supabase', 'Supabase REST API reachable + key valid', 'fail',
+        'Status ' + r.status + ' — anon key REJECTED. Check supabaseKey in config.js', 'err');
+    } else {
+      log('supabase', 'Supabase REST API reachable + key valid', 'fail',
+        'Status ' + r.status + ' — ' + body.substring(0, 200), 'err');
+    }
+  } catch(e) {
+    const isTimeout = e.name === 'AbortError';
+    log('supabase', 'Supabase REST API reachable + key valid', 'fail',
+      isTimeout
+        ? 'TIMEOUT (12s) — Supabase unreachable on this network. Likely IPv6-only connection issue.'
+        : 'Network/CORS error: ' + e.message,
+      'err');
+  }
+
+  // Test 2b: corsproxy.io reachable? (fallback for IPv6-only devices)
+  try {
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url + '/rest/v1/' + table + '?select=id&limit=1');
+    const r = await fetchWithTimeout(proxyUrl, { headers: { apikey: key, Authorization: 'Bearer ' + key } }, 10000);
+    const body = await r.text();
+    if (r.ok) {
+      log('supabase', 'Proxy fallback (corsproxy.io) → Supabase', 'pass',
+        'Status ' + r.status + ' — proxy works! IPv6 devices will use this as fallback', 'ok');
+    } else {
+      log('supabase', 'Proxy fallback (corsproxy.io) → Supabase', 'warn',
+        'Status ' + r.status + ' — proxy reachable but returned error', 'warn');
+    }
+  } catch(e) {
+    log('supabase', 'Proxy fallback (corsproxy.io) → Supabase', 'fail',
+      e.name === 'AbortError' ? 'TIMEOUT — proxy also unreachable on this network' : e.message, 'err');
+  }
+
+  // Test 3: Can we INSERT? (Test write permission)
+  try {
+    const testPayload = {
+      session_id: '_debug_test_' + Date.now(),
+      visited_at: new Date().toISOString(),
+      device_type: 'Debug',
+      os: 'Debug',
+      browser: 'Debug',
+      page_url: location.href,
+      source: 'none',
+      duration_seconds: 0,
+      scroll_depth_pct: 0,
+      referrer: 'debug-page',
+      screen_resolution: screen.width + 'x' + screen.height,
+      language: navigator.language || null,
+    };
+    const r = await fetchWithTimeout(
+      url + '/rest/v1/' + table,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: key,
+          Authorization: 'Bearer ' + key,
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify(testPayload)
+      },
+      8000
+    );
+    const body = await r.text();
+    if (r.ok) {
+      log('supabase', 'Supabase INSERT (write permission)', 'pass',
+        'Test row inserted successfully — RLS allows anon insert ✓', 'ok');
+      // Try to delete the test row
+      try {
+        const json = JSON.parse(body);
+        if (json && json[0] && json[0].id) {
+          await fetch(url + '/rest/v1/' + table + '?id=eq.' + json[0].id, {
+            method: 'DELETE',
+            headers: { apikey: key, Authorization: 'Bearer ' + key }
+          });
+          log('supabase', 'Cleanup test row', 'pass', 'Debug row removed', 'ok');
+        }
+      } catch(e) {}
+    } else {
+      log('supabase', 'Supabase INSERT (write permission)', 'fail',
+        'Status ' + r.status + '\n' + body.substring(0, 300) + '\n\n⚠️ Check RLS policies in Supabase dashboard!', 'err');
+    }
+  } catch(e) {
+    log('supabase', 'Supabase INSERT', 'fail', e.message, 'err');
+  }
+
+  updateRaw();
+  finalize();
+}
+
+// ── FINALIZE ──────────────────────────────────────────────────────
+function finalize() {
+  document.getElementById('progress').style.display = 'none';
+  const summary = document.getElementById('summary');
+  const title   = document.getElementById('summary-title');
+  const body    = document.getElementById('summary-body');
+  summary.style.display = 'block';
+
+  const total = results.pass + results.fail + results.warn;
+  if (results.fail > 0) {
+    title.textContent = '❌ ' + results.fail + ' failure(s) found';
+    title.style.color = '#f87171';
+    body.innerHTML = 'There are <strong style="color:#f87171">' + results.fail + ' failing tests</strong> and ' + results.warn + ' warnings. '
+      + 'Look for ❌ items above — those are your root causes.<br><br>'
+      + '<strong>Copy the full report</strong> using the button below and share it.';
+  } else if (results.warn > 0) {
+    title.textContent = '⚠️ All passing with ' + results.warn + ' warning(s)';
+    title.style.color = '#fbbf24';
+    body.innerHTML = 'No hard failures, but there are warnings. The admin page should mostly work. '
+      + 'Warnings (yellow) are non-critical issues.';
+  } else {
+    title.textContent = '✅ All ' + total + ' tests passed!';
+    title.style.color = '#34d399';
+    body.innerHTML = 'Everything looks good on this device. '
+      + 'If the admin page is still blank, the issue may be the <strong>#hash</strong> in the URL '
+      + 'or a JS error in admin.js itself.';
+  }
+
+  // Add summary to report
+  report.unshift('='.repeat(50));
+  report.unshift('SUMMARY: ' + results.pass + ' pass, ' + results.fail + ' fail, ' + results.warn + ' warn');
+  report.unshift('URL: ' + location.href);
+  report.unshift('Time: ' + new Date().toISOString());
+  report.unshift('UA: ' + navigator.userAgent);
+  report.unshift('='.repeat(50));
+  updateRaw();
+}
+
+// ── RUN ALL ───────────────────────────────────────────────────────
+async function runAll() {
+  report.push('=== BIODATA ANALYTICS DEBUG REPORT ===');
+  report.push('Generated: ' + new Date().toISOString());
+  report.push('');
+  report.push('--- DEVICE ---');
+  runDeviceTests();
+  updateRaw();
+
+  report.push('');
+  report.push('--- SCRIPTS ---');
+  runScriptTests();
+  updateRaw();
+
+  report.push('');
+  report.push('--- NETWORK ---');
+  await runNetworkTests();
+
+  report.push('');
+  report.push('--- SUPABASE ---');
+  await runSupabaseTests();
+}
+
+runAll();
+</script>
+</body>
+</html>

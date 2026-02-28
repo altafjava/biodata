@@ -3,9 +3,11 @@
 //  ALL settings in analytics/config.js
 // ============================================================
 (function () {
-  function waitForConfig(cb) {
+  function waitForConfig(cb, retries) {
+    retries = retries === undefined ? 0 : retries;
     if (window.ANALYTICS_CONFIG) return cb(window.ANALYTICS_CONFIG);
-    setTimeout(() => waitForConfig(cb), 50);
+    if (retries > 100) return; // Give up after 5s — don't block page
+    setTimeout(() => waitForConfig(cb, retries + 1), 50);
   }
 
   waitForConfig(function (cfg) {
@@ -73,11 +75,37 @@
       return ref.split("/")[2] || ref;
     }
 
-    // ── Supabase ──────────────────────────────────────────────
+    // ── Supabase fetch with IPv6 fallback via proxy ──────────
+    function abortFetch(url, opts, ms) {
+      const controller = window.AbortController ? new AbortController() : null;
+      const timer = controller ? setTimeout(function() { controller.abort(); }, ms) : null;
+      const fetchOpts = controller ? Object.assign({}, opts, { signal: controller.signal }) : opts;
+      return fetch(url, fetchOpts).finally(function() { if (timer) clearTimeout(timer); });
+    }
+
+    async function supabaseFetch(path, opts) {
+      const fullUrl = SUPABASE_URL + path;
+      // Try 1: Direct connection (works on IPv4 networks)
+      try {
+        const res = await abortFetch(fullUrl, opts, 7000);
+        return res;
+      } catch (e1) {
+        log("Direct Supabase failed (" + e1.message + "), trying proxy...");
+      }
+      // Try 2: corsproxy.io — has IPv4 connectivity, works for IPv6-only devices
+      try {
+        const proxied = "https://corsproxy.io/?" + encodeURIComponent(fullUrl);
+        const res = await abortFetch(proxied, opts, 10000);
+        return res;
+      } catch (e2) {
+        throw new Error("Supabase unreachable (direct + proxy both failed): " + e2.message);
+      }
+    }
+
     async function insertVisit(data) {
       log("Inserting visit...", data);
       try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE_NAME}`, {
+        const res = await supabaseFetch(`/rest/v1/${TABLE_NAME}`, {
           method: "POST",
           headers: {
             "Content-Type":  "application/json",
@@ -98,7 +126,7 @@
       if (!visitId) return;
       log("Updating visit:", visitId, data);
       try {
-        await fetch(`${SUPABASE_URL}/rest/v1/${TABLE_NAME}?id=eq.${visitId}`, {
+        await supabaseFetch(`/rest/v1/${TABLE_NAME}?id=eq.${visitId}`, {
           method: "PATCH",
           headers: {
             "Content-Type":  "application/json",

@@ -6,19 +6,19 @@
   <title>Analytics · Altaf Ansari</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <link rel="stylesheet" href="admin.css"/>
 </head>
 <body>
 <div class="overlay" id="overlay"></div>
 
-<div id="gate" class="gate hidden">
+<div id="gate" class="gate">
   <div class="gate-box">
-    <div class="gate-icon">🔐</div>
-    <h2>Access Restricted</h2>
-    <p>This page is private.</p>
+    <div class="gate-icon" id="gate-icon" style="animation:spin 1.5s linear infinite;display:inline-block">⏳</div>
+    <h2 id="gate-heading" style="margin-top:12px;opacity:0.5;font-weight:400">Loading…</h2>
+    <p id="gate-msg"></p>
   </div>
 </div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <div id="app" class="app hidden">
   <aside class="sidebar" id="sidebar">
@@ -237,6 +237,10 @@
   </main>
 </div>
 
+<!-- Chart.js: primary CDN with automatic fallback -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
+  onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'">
+</script>
 <script src="config.js"></script>
 <script src="admin.js"></script>
 <script>
