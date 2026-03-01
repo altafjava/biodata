@@ -249,87 +249,87 @@ function initAdmin(cfg) {
     const refs=countBy(rows,'referrer').slice(0,6);
     makeChart('chart-referrer','doughnut',refs.map(r=>r[0]),refs.map(r=>r[1]));
 
-    // Recipients chart — horizontal bar, top 10 by default, "show all" toggle
-    const recipRows = rows.filter(r=>r.recipient_tag);
-    const recipCard = document.getElementById('recipients-card');
-    const recipBadge = document.getElementById('recipients-badge');
-    const recipToggle = document.getElementById('recipients-toggle');
-    if (recipRows.length > 0) {
-      const allRecipCounts = countBy(recipRows, 'recipient_tag'); // sorted desc
-      const totalRecip = allRecipCounts.length;
+    // Recipients Activity chart — all recipients, last 7 days, vertical bars
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+    const recipRows7   = rows.filter(r => r.recipient_tag && new Date(r.visited_at) >= sevenDaysAgo);
+    const recipCard    = document.getElementById('recipients-card');
+    const recipBadge   = document.getElementById('recipients-badge');
+    const recipToggle  = document.getElementById('recipients-toggle');
+
+    if (recipRows7.length > 0) {
+      // Group by tag, sort by most recent visit (not by count)
+      const recipTagMap = {};
+      recipRows7.forEach(r => {
+        const t = r.recipient_tag;
+        if (!recipTagMap[t]) recipTagMap[t] = { tag: t, count: 0, lastSeen: r.visited_at };
+        recipTagMap[t].count++;
+        if (r.visited_at > recipTagMap[t].lastSeen) recipTagMap[t].lastSeen = r.visited_at;
+      });
+      const allRecipCounts = Object.values(recipTagMap)
+        .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))  // newest first
+        .map(r => [r.tag, r.count]);
+      const totalRecip     = allRecipCounts.length;
       recipCard.style.display = '';
+      recipBadge.textContent  = `last 7 days · ${totalRecip} recipient${totalRecip !== 1 ? 's' : ''}`;
+      recipToggle.style.display = 'none'; // no toggle — show all always
 
-      let showAll = false;
-      function drawRecipientsChart() {
-        const data = showAll ? allRecipCounts : allRecipCounts.slice(0, 10);
-        const label = data.map(r=>r[0]);
-        const vals  = data.map(r=>r[1]);
-        // Dynamic height: 36px per bar + 40px padding, min 180px
-        const chartH = Math.max(180, data.length * 36 + 40);
-        const body = document.getElementById('recipients-chart-body');
-        body.style.height = chartH + 'px';
-        body.style.minHeight = chartH + 'px';
+      const label = allRecipCounts.map(r => r[0]);
+      const vals  = allRecipCounts.map(r => r[1]);
+      const bg    = label.map((_, i) => P[i % P.length]);
 
-        recipBadge.textContent = showAll
-          ? `all ${totalRecip} recipients`
-          : `top ${Math.min(10, totalRecip)} of ${totalRecip}`;
-        recipToggle.style.display = totalRecip > 10 ? '' : 'none';
-        recipToggle.textContent   = showAll ? 'Show top 10' : `Show all ${totalRecip}`;
+      // Smart label rotation: vertical (90°) when many bars, horizontal when few
+      const rotate = totalRecip > 8 ? 90 : 0;
+      // Taller chart body when labels are rotated to give room
+      const body = document.getElementById('recipients-chart-body');
+      body.style.paddingBottom = rotate === 90 ? '60px' : '16px';
 
-        if (charts['chart-recipients']) charts['chart-recipients'].destroy();
-        const ctx = document.getElementById('chart-recipients');
-        if (!ctx) return;
-        charts['chart-recipients'] = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: label,
-            datasets: [{
-              data: vals,
-              backgroundColor: P.slice(0, vals.length).concat(
-                vals.length > P.length ? Array(vals.length - P.length).fill('#4f46e5') : []
-              ),
-              borderRadius: 5,
-              borderWidth: 0,
-            }]
-          },
-          options: {
-            indexAxis: 'y',   // horizontal bars
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                backgroundColor: '#0f1221',
-                borderColor: 'rgba(255,255,255,0.08)',
-                borderWidth: 1, padding: 10, cornerRadius: 8,
-                callbacks: {
-                  label: ctx => ` ${ctx.parsed.x} visit${ctx.parsed.x !== 1 ? 's' : ''}`
-                }
-              }
-            },
-            scales: {
-              x: {
-                grid: { color: '#f0f2f8' },
-                beginAtZero: true,
-                ticks: { font: { size: 10 }, stepSize: 1 },
-                position: 'top',
-              },
-              y: {
-                grid: { display: false },
-                ticks: { font: { size: 11 }, color: '#0f1221' },
+      if (charts['chart-recipients']) charts['chart-recipients'].destroy();
+      const ctx = document.getElementById('chart-recipients');
+      if (!ctx) return;
+
+      charts['chart-recipients'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: label,
+          datasets: [{
+            data: vals,
+            backgroundColor: bg,
+            borderRadius: 6,
+            borderWidth: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f1221',
+              borderColor: 'rgba(255,255,255,0.08)',
+              borderWidth: 1, padding: 10, cornerRadius: 8,
+              callbacks: {
+                label: c => ` ${c.parsed.y} visit${c.parsed.y !== 1 ? 's' : ''}`
               }
             }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: {
+                font: { size: totalRecip > 12 ? 9 : 11 },
+                maxRotation: rotate,
+                minRotation: rotate,
+                autoSkip: false,   // always show all labels
+              },
+            },
+            y: {
+              grid: { color: '#f0f2f8' },
+              beginAtZero: true,
+              ticks: { font: { size: 10 }, stepSize: 1 },
+              position: 'right',
+            }
           }
-        });
-      }
-
-      drawRecipientsChart();
-      // Remove old listeners by cloning the button
-      const newToggle = recipToggle.cloneNode(true);
-      recipToggle.parentNode.replaceChild(newToggle, recipToggle);
-      newToggle.addEventListener('click', () => {
-        showAll = !showAll;
-        drawRecipientsChart();
+        }
       });
     } else {
       recipCard.style.display = 'none';
@@ -472,9 +472,10 @@ function initAdmin(cfg) {
     const tbody = document.getElementById('recipients-tbody');
     const tagged = rows.filter(r => r.recipient_tag);
     if (!tagged.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No tagged links clicked yet. Share links like: biodata/#lovely</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="empty-cell">No tagged links clicked yet.</td></tr>';
       return;
     }
+
     // Group by recipient_tag
     const map = {};
     tagged.forEach(r => {
@@ -484,21 +485,30 @@ function initAdmin(cfg) {
       if (r.visited_at < map[t].firstSeen) map[t].firstSeen = r.visited_at;
       if (r.visited_at > map[t].lastSeen)  map[t].lastSeen  = r.visited_at;
     });
-    const sorted = Object.values(map).sort((a,b)=>b.visits.length-a.visits.length);
+
+    const sorted = Object.values(map).sort((a,b) => new Date(b.lastSeen) - new Date(a.lastSeen)); // newest first
+
     tbody.innerHTML = sorted.map((rec, i) => {
-      const sessions = new Set(rec.visits.map(r=>r.session_id)).size;
-      const maxScroll = Math.max(...rec.visits.map(r=>r.scroll_depth_pct||0));
-      const totalDur  = rec.visits.reduce((s,r)=>s+(r.duration_seconds||0),0);
-      const contacted = rec.visits.some(r=>r.source==='whatsapp'||r.source==='phone');
-      const src       = rec.visits.find(r=>r.source==='whatsapp') ? '💬 WhatsApp'
-                      : rec.visits.find(r=>r.source==='phone')    ? '📞 Phone' : '—';
+      const v         = rec.visits;
+      const sessions  = new Set(v.map(r=>r.session_id)).size;
+      const maxScroll = Math.max(...v.map(r=>r.scroll_depth_pct||0));
+      const totalDur  = v.reduce((s,r)=>s+(r.duration_seconds||0),0);
+
+      // Contact: prefer whatsapp > phone > none
+      const waRow = v.find(r=>r.source==='whatsapp');
+      const phRow = v.find(r=>r.source==='phone');
+      const src   = waRow ? '<span class="tag tag-wa">💬 WhatsApp</span>'
+                  : phRow ? '<span class="tag tag-phone">📞 Phone</span>'
+                  : '—';
+
       return `<tr>
         <td class="mono muted">${i+1}</td>
         <td style="font-weight:600;color:#4f46e5">🏷️ ${rec.tag}</td>
-        <td class="mono">${rec.visits.length} (${sessions} session${sessions>1?'s':''})</td>
+        <td class="mono">${v.length} (${sessions} session${sessions>1?'s':''})</td>
+        <td class="mono">${fmtDate(rec.firstSeen, true)}</td>
         <td class="mono">${fmtDate(rec.lastSeen, true)}</td>
-        <td class="mono">${maxScroll?maxScroll+'%':'—'} · ${fmtDur(Math.round(totalDur/rec.visits.length))}</td>
-        <td>${contacted?src:'—'}</td>
+        <td class="mono">${maxScroll?maxScroll+'%':'—'} · ${fmtDur(Math.round(totalDur/v.length))}</td>
+        <td>${src}</td>
       </tr>`;
     }).join('');
   }
