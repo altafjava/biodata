@@ -1,66 +1,73 @@
 -- ============================================================
---  Supabase Setup SQL v2
---  Run this in: Supabase Dashboard → SQL Editor → New query
---  NOTE: If you already ran v1, run the ALTER TABLE section only
+--  Biodata Analytics — Supabase Setup SQL v3
+--  Run in: Supabase Dashboard → SQL Editor → New query
 -- ============================================================
 
--- ── 1. Drop old table and recreate (ONLY if starting fresh) ──
--- Skip this if you already have data — use ALTER TABLE below instead
+-- ── DROP & RECREATE (safe — all data will be lost) ───────────
 DROP TABLE IF EXISTS visits;
 
 CREATE TABLE visits (
-  id                BIGSERIAL PRIMARY KEY,
-  session_id        TEXT,
-  visited_at        TIMESTAMPTZ DEFAULT NOW(),
+  -- ── Identity & Timing (most queried) ──────────────────────
+  id                BIGSERIAL     PRIMARY KEY,
+  session_id        TEXT          NOT NULL,
+  visited_at        TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
 
-  -- IP (split into v4 and v6)
+  -- ── Recipient Tracking ────────────────────────────────────
+  -- NULL = direct visit (no tag in URL)
+  recipient_tag     TEXT          DEFAULT NULL,
+
+  -- ── Engagement (updated frequently via PATCH) ─────────────
+  duration_seconds  INTEGER       DEFAULT 0,
+  scroll_depth_pct  INTEGER       DEFAULT 0,
+
+  -- ── Contact action ────────────────────────────────────────
+  -- 'whatsapp' | 'phone' | 'none'
+  source            TEXT          DEFAULT 'none',
+
+  -- ── Device Info ───────────────────────────────────────────
+  device_type       TEXT,          -- 'Mobile' | 'Tablet' | 'Desktop'
+  browser           TEXT,          -- 'Chrome' | 'Opera' | 'Samsung Browser' | ...
+  os                TEXT,          -- 'Android' | 'iOS' | 'Windows' | ...
+  screen_resolution TEXT,          -- '360x800'
+  language          TEXT,          -- 'en-IN'
+
+  -- ── IP Addresses ──────────────────────────────────────────
   ipv4              TEXT,
   ipv6              TEXT,
 
-  -- Geo from IP API
+  -- ── Geo from IP API ───────────────────────────────────────
   city              TEXT,
   region            TEXT,
   country           TEXT,
   isp               TEXT,
+  timezone          TEXT,
   latitude          FLOAT,
   longitude         FLOAT,
-  timezone          TEXT,
 
-  -- GPS (from browser permission)
-  gps_granted       BOOLEAN DEFAULT FALSE,
+  -- ── GPS from browser permission ───────────────────────────
+  gps_granted       BOOLEAN       DEFAULT FALSE,
   gps_lat           FLOAT,
   gps_lng           FLOAT,
   gps_accuracy      FLOAT,
 
-  -- Device info
-  device_type       TEXT,
-  os                TEXT,
-  browser           TEXT,
-  screen_resolution TEXT,
-  language          TEXT,
-  page_url          TEXT,
-
-  -- Engagement
-  referrer          TEXT,
-  duration_seconds  INTEGER DEFAULT 0,
-  scroll_depth_pct  INTEGER DEFAULT 0,
-
-  -- Source: 'whatsapp' | 'phone' | 'none'
-  source            TEXT DEFAULT 'none'
+  -- ── Request Metadata ──────────────────────────────────────
+  referrer          TEXT,          -- 'WhatsApp' | 'Google' | 'Direct / Unknown' | ...
+  page_url          TEXT
 );
 
--- ── 2. RLS Policies ───────────────────────────────────────────
+-- ── Row Level Security ────────────────────────────────────────
 ALTER TABLE visits ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow anonymous insert"
-  ON visits FOR INSERT TO anon WITH CHECK (true);
+-- Allow anon key to insert (track visit), select (admin reads), update (patch duration/scroll)
+CREATE POLICY "anon_insert" ON visits FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon_select" ON visits FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_update" ON visits FOR UPDATE TO anon USING (true);
 
-CREATE POLICY "Allow anonymous select"
-  ON visits FOR SELECT TO anon USING (true);
-
-CREATE POLICY "Allow anonymous update"
-  ON visits FOR UPDATE TO anon USING (true);
-
--- ── 3. Indexes ────────────────────────────────────────────────
-CREATE INDEX idx_visits_visited_at ON visits (visited_at DESC);
-CREATE INDEX idx_visits_session_id ON visits (session_id);
+-- ── Indexes ───────────────────────────────────────────────────
+-- Primary query patterns in order of frequency:
+--   1. Load dashboard filtered by date range
+--   2. Group sessions for unique visitor counting
+--   3. Filter/group tagged links in Recipients tab
+CREATE INDEX idx_visits_visited_at    ON visits (visited_at DESC);
+CREATE INDEX idx_visits_session_id    ON visits (session_id);
+CREATE INDEX idx_visits_recipient_tag ON visits (recipient_tag) WHERE recipient_tag IS NOT NULL;

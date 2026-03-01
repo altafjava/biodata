@@ -33,7 +33,6 @@
     }
 
     // ── Extract recipient tag from URL hash ───────────────────
-    // Supports: https://altafjava.github.io/biodata/#shaheen-parween
     // If hash matches admin secret → skip, let admin handle it
     function getRecipientTag() {
       const hash = window.location.hash.replace('#', '').trim();
@@ -294,7 +293,7 @@
         duration_seconds:  0,
         scroll_depth_pct:  0,
         source:            'none',
-        recipient_tag:     recipientTag,   // null for direct visits, "shaheen-parween" for tagged links
+        recipient_tag:     recipientTag,
         ...geo,
         ...gps,
       });

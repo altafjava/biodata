@@ -122,24 +122,37 @@
         </div>
       </div>
 
+      <!-- Row 1: Visits Over Time full width -->
       <div class="charts-row">
         <div class="chart-card chart-wide">
           <div class="chart-hdr"><h3>Visits Over Time</h3><span class="chart-badge">oldest → newest · Y axis on right</span></div>
           <div class="chart-body"><canvas id="chart-timeline"></canvas></div>
         </div>
+      </div>
+      <!-- Row 2: Traffic Sources + Visit by Hour side by side -->
+      <div class="charts-row">
         <div class="chart-card">
           <div class="chart-hdr"><h3>Traffic Sources</h3></div>
           <div class="chart-body"><canvas id="chart-referrer"></canvas></div>
         </div>
-      </div>
-      <div class="charts-row">
-        <div class="chart-card" id="recipients-card">
-          <div class="chart-hdr"><h3>Recipients Activity</h3><span class="chart-badge">tagged link clicks</span></div>
-          <div class="chart-body"><canvas id="chart-recipients"></canvas></div>
-        </div>
         <div class="chart-card">
           <div class="chart-hdr"><h3>Visit by Hour</h3><span class="chart-badge">when people visit</span></div>
           <div class="chart-body"><canvas id="chart-hours"></canvas></div>
+        </div>
+      </div>
+      <!-- Row 3: Recipients Activity full width, dynamic height, hidden when no data -->
+      <div class="charts-row" id="recipients-card" style="display:none">
+        <div class="chart-card chart-wide">
+          <div class="chart-hdr">
+            <h3>Recipients Activity</h3>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="chart-badge" id="recipients-badge">0 recipients</span>
+              <button id="recipients-toggle" style="display:none;font-size:11px;padding:3px 10px;background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;border-radius:6px;cursor:pointer;font-family:inherit">Show all</button>
+            </div>
+          </div>
+          <div class="chart-body" id="recipients-chart-body" style="padding:16px 20px">
+            <canvas id="chart-recipients"></canvas>
+          </div>
         </div>
       </div>
     </section>
@@ -189,7 +202,7 @@
         </div>
         <div style="padding:14px 20px;background:#f8f9fd;border-bottom:1px solid #e8ecf5;font-size:12px;color:#64748b;line-height:1.7">
           Share personalised links like:&nbsp;
-          <code style="background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:5px;font-size:11px">https://altafjava.github.io/biodata/#shaheen-parween</code>
+          <code style="background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:5px;font-size:11px">https://altafjava.github.io/biodata/#lovely</code>
           &nbsp;— each click is tracked separately below.
         </div>
         <div class="table-wrap">

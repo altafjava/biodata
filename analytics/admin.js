@@ -249,14 +249,90 @@ function initAdmin(cfg) {
     const refs=countBy(rows,'referrer').slice(0,6);
     makeChart('chart-referrer','doughnut',refs.map(r=>r[0]),refs.map(r=>r[1]));
 
-    // Recipients chart — who clicked the most
+    // Recipients chart — horizontal bar, top 10 by default, "show all" toggle
     const recipRows = rows.filter(r=>r.recipient_tag);
+    const recipCard = document.getElementById('recipients-card');
+    const recipBadge = document.getElementById('recipients-badge');
+    const recipToggle = document.getElementById('recipients-toggle');
     if (recipRows.length > 0) {
-      const recipCounts = countBy(recipRows, 'recipient_tag').slice(0, 10);
-      makeChart('chart-recipients','bar', recipCounts.map(r=>r[0]), recipCounts.map(r=>r[1]));
-      document.getElementById('recipients-card').style.display = '';
+      const allRecipCounts = countBy(recipRows, 'recipient_tag'); // sorted desc
+      const totalRecip = allRecipCounts.length;
+      recipCard.style.display = '';
+
+      let showAll = false;
+      function drawRecipientsChart() {
+        const data = showAll ? allRecipCounts : allRecipCounts.slice(0, 10);
+        const label = data.map(r=>r[0]);
+        const vals  = data.map(r=>r[1]);
+        // Dynamic height: 36px per bar + 40px padding, min 180px
+        const chartH = Math.max(180, data.length * 36 + 40);
+        const body = document.getElementById('recipients-chart-body');
+        body.style.height = chartH + 'px';
+        body.style.minHeight = chartH + 'px';
+
+        recipBadge.textContent = showAll
+          ? `all ${totalRecip} recipients`
+          : `top ${Math.min(10, totalRecip)} of ${totalRecip}`;
+        recipToggle.style.display = totalRecip > 10 ? '' : 'none';
+        recipToggle.textContent   = showAll ? 'Show top 10' : `Show all ${totalRecip}`;
+
+        if (charts['chart-recipients']) charts['chart-recipients'].destroy();
+        const ctx = document.getElementById('chart-recipients');
+        if (!ctx) return;
+        charts['chart-recipients'] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: label,
+            datasets: [{
+              data: vals,
+              backgroundColor: P.slice(0, vals.length).concat(
+                vals.length > P.length ? Array(vals.length - P.length).fill('#4f46e5') : []
+              ),
+              borderRadius: 5,
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            indexAxis: 'y',   // horizontal bars
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#0f1221',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderWidth: 1, padding: 10, cornerRadius: 8,
+                callbacks: {
+                  label: ctx => ` ${ctx.parsed.x} visit${ctx.parsed.x !== 1 ? 's' : ''}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: '#f0f2f8' },
+                beginAtZero: true,
+                ticks: { font: { size: 10 }, stepSize: 1 },
+                position: 'top',
+              },
+              y: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, color: '#0f1221' },
+              }
+            }
+          }
+        });
+      }
+
+      drawRecipientsChart();
+      // Remove old listeners by cloning the button
+      const newToggle = recipToggle.cloneNode(true);
+      recipToggle.parentNode.replaceChild(newToggle, recipToggle);
+      newToggle.addEventListener('click', () => {
+        showAll = !showAll;
+        drawRecipientsChart();
+      });
     } else {
-      document.getElementById('recipients-card').style.display = 'none';
+      recipCard.style.display = 'none';
     }
 
     // Visit by Hour
@@ -396,7 +472,7 @@ function initAdmin(cfg) {
     const tbody = document.getElementById('recipients-tbody');
     const tagged = rows.filter(r => r.recipient_tag);
     if (!tagged.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No tagged links clicked yet. Share links like: biodata/#shaheen-parween</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No tagged links clicked yet. Share links like: biodata/#lovely</td></tr>';
       return;
     }
     // Group by recipient_tag
