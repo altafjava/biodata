@@ -6,7 +6,7 @@
   function waitForConfig(cb, retries) {
     retries = retries === undefined ? 0 : retries;
     if (window.ANALYTICS_CONFIG) return cb(window.ANALYTICS_CONFIG);
-    if (retries > 100) return; // Give up after 5s — don't block page
+    if (retries > 100) return;
     setTimeout(() => waitForConfig(cb, retries + 1), 50);
   }
 
@@ -32,10 +32,23 @@
       log("Returning visitor — session:", sessionId);
     }
 
-    const sessionStart = Date.now();
-    let visitId        = null;
-    let scrollDepth    = 0;
-    let source         = 'none';
+    // ── Extract recipient tag from URL hash ───────────────────
+    // Supports: https://altafjava.github.io/biodata/#shaheen-parween
+    // If hash matches admin secret → skip, let admin handle it
+    function getRecipientTag() {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (!hash || hash === ADMIN_SECRET) return null;
+      // Clean: lowercase, only letters/digits/hyphens, max 60 chars
+      return hash.replace(/[^a-zA-Z0-9\-_]/g, '').substring(0, 60) || null;
+    }
+
+    const sessionStart  = Date.now();
+    let visitId         = null;
+    let scrollDepth     = 0;
+    let source          = 'none';
+    const recipientTag  = getRecipientTag();
+
+    log("Recipient tag:", recipientTag || "(none — direct visit)");
 
     // ── Device helpers ────────────────────────────────────────
     function getDeviceType() {
@@ -55,12 +68,20 @@
     }
     function getBrowser() {
       const ua = navigator.userAgent;
-      if (/edg/i.test(ua))                              return "Edge";
-      if (/chrome/i.test(ua) && !/chromium/i.test(ua)) return "Chrome";
-      if (/firefox/i.test(ua))                          return "Firefox";
-      if (/safari/i.test(ua) && !/chrome/i.test(ua))   return "Safari";
-      if (/opera|opr/i.test(ua))                        return "Opera";
-      if (/samsung/i.test(ua))                          return "Samsung Browser";
+      // Order matters: check specific browsers before generic ones
+      if (/edg\//i.test(ua))                              return "Edge";
+      if (/opr\//i.test(ua) || /opera/i.test(ua))        return "Opera";
+      if (/samsungbrowser/i.test(ua))                     return "Samsung Browser";
+      if (/miui.*browser|miuibrowser/i.test(ua))          return "MIUI Browser";
+      if (/ucbrowser/i.test(ua))                          return "UC Browser";
+      if (/yabrowser/i.test(ua))                          return "Yandex Browser";
+      if (/brave/i.test(ua))                              return "Brave";
+      if (/duckduckgo/i.test(ua))                         return "DuckDuckGo";
+      if (/vivaldi/i.test(ua))                            return "Vivaldi";
+      if (/chromium/i.test(ua))                           return "Chromium";
+      if (/chrome/i.test(ua))                             return "Chrome";
+      if (/firefox/i.test(ua))                            return "Firefox";
+      if (/safari/i.test(ua))                             return "Safari";
       return "Unknown";
     }
     function getReferrer() {
@@ -138,33 +159,26 @@
       } catch (e) { err("Update failed:", e.message); }
     }
 
-    // ── Geo + IPv4 + IPv6 (all HTTPS, mixed-content safe) ────────
+    // ── Geo + IPv4 + IPv6 ─────────────────────────────────────
     async function getGeoData() {
       log("Fetching IP geo...");
       let ipv4 = null, ipv6 = null, geo = {};
 
-      // Fetch IPv4 and IPv6 in parallel using dedicated endpoints
       await Promise.allSettled([
-        // IPv4-only endpoint (forces IPv4 connection)
         fetch("https://api4.my-ip.io/v2/ip.json")
           .then(r => r.json())
           .then(d => { if (d.ip) { ipv4 = d.ip; log("IPv4:", ipv4); } })
           .catch(() => log("IPv4 endpoint failed")),
-
-        // IPv6-only endpoint (forces IPv6 connection if available)
         fetch("https://api6.my-ip.io/v2/ip.json")
           .then(r => r.json())
           .then(d => { if (d.ip && d.ip.includes(":")) { ipv6 = d.ip; log("IPv6:", ipv6); } })
-          .catch(() => log("IPv6 not available (normal for IPv4-only connections)")),
+          .catch(() => log("IPv6 not available")),
       ]);
 
-      // Get geo info from ipapi.co (HTTPS, reliable)
       try {
         const res = await fetch("https://ipapi.co/json/");
         const d   = await res.json();
         if (!d.error) {
-          log("ipapi.co geo:", d);
-          // If we didn't get IPv4 yet, use ipapi.co's IP
           if (!ipv4 && d.ip && !d.ip.includes(":")) ipv4 = d.ip;
           if (!ipv6 && d.ip && d.ip.includes(":"))  ipv6 = d.ip;
           geo = {
@@ -177,38 +191,27 @@
             timezone:  d.timezone      || null,
           };
         }
-      } catch(e) { log("ipapi.co failed (normal on localhost):", e.message); }
+      } catch(e) { log("ipapi.co failed:", e.message); }
 
-      log("Final IPs — IPv4:", ipv4, "IPv6:", ipv6);
       return { ipv4, ipv6, ...geo };
     }
 
-    // ── GPS Location (ask permission) ─────────────────────────
+    // ── GPS Location ──────────────────────────────────────────
     async function getGPSLocation() {
-      if (!navigator.geolocation) {
-        log("Geolocation not supported");
-        return { gps_granted: false };
-      }
+      if (!navigator.geolocation) return { gps_granted: false };
       return new Promise((resolve) => {
-        // Small delay so page loads first before permission popup
         setTimeout(() => {
           navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              log("GPS granted:", pos.coords);
-              resolve({
-                gps_granted:  true,
-                gps_lat:      pos.coords.latitude,
-                gps_lng:      pos.coords.longitude,
-                gps_accuracy: Math.round(pos.coords.accuracy),
-              });
-            },
-            (error) => {
-              log("GPS denied or error:", error.message);
-              resolve({ gps_granted: false });
-            },
+            (pos) => resolve({
+              gps_granted:  true,
+              gps_lat:      pos.coords.latitude,
+              gps_lng:      pos.coords.longitude,
+              gps_accuracy: Math.round(pos.coords.accuracy),
+            }),
+            (error) => resolve({ gps_granted: false }),
             { timeout: 10000, maximumAge: 300000, enableHighAccuracy: false }
           );
-        }, 2500); // wait 2.5s after page load
+        }, 2500);
       });
     }
 
@@ -218,53 +221,44 @@
         const docH = document.documentElement.scrollHeight - window.innerHeight;
         if (docH > 0) {
           const pct = Math.round((window.scrollY / docH) * 100);
-          if (pct > scrollDepth) {
-            scrollDepth = pct;
-          }
+          if (pct > scrollDepth) scrollDepth = pct;
         }
       });
     }
 
-    // ── Button clicks → source ────────────────────────────────
+    // ── Button clicks ─────────────────────────────────────────
     function trackButtons() {
       const waBtn    = document.querySelector('a[href*="wa.me"]');
       const phoneBtn = document.querySelector('a[href*="tel:"]');
       if (waBtn) {
         waBtn.addEventListener("click", () => {
-          log("WhatsApp clicked → source: whatsapp");
+          log("WhatsApp clicked");
           source = 'whatsapp';
           updateVisit({ source: 'whatsapp' });
         });
       }
       if (phoneBtn) {
         phoneBtn.addEventListener("click", () => {
-          log("Phone clicked → source: phone");
+          log("Phone clicked");
           source = 'phone';
           updateVisit({ source: 'phone' });
         });
       }
     }
 
-    // ── Session end + periodic save ──────────────────────────
+    // ── Session end ───────────────────────────────────────────
     function trackSessionEnd() {
       const save = () => {
         const dur = Math.round((Date.now() - sessionStart) / 1000);
-        log("Saving session. Duration:", dur + "s, Scroll:", scrollDepth + "%, Source:", source);
         const update = { duration_seconds: dur, scroll_depth_pct: scrollDepth };
         if (source !== 'none') update.source = source;
         updateVisit(update);
       };
-
-      // Save on tab close / navigation
       window.addEventListener("beforeunload", save);
-      // Save when tab goes to background (most reliable on mobile)
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "hidden") save();
       });
-      // Also save every 15s while page is open, so scroll data is never lost
-      setInterval(() => {
-        if (visitId) save();
-      }, 15000);
+      setInterval(() => { if (visitId) save(); }, 15000);
     }
 
     // ── Admin shortcut ────────────────────────────────────────
@@ -282,10 +276,9 @@
 
     // ── Init ──────────────────────────────────────────────────
     async function init() {
-      if (!SUPABASE_URL || SUPABASE_URL.includes("YOUR_")) { err("supabaseUrl not set in config.js!"); return; }
-      if (!SUPABASE_KEY || SUPABASE_KEY.includes("YOUR_")) { err("supabaseKey not set in config.js!"); return; }
+      if (!SUPABASE_URL || SUPABASE_URL.includes("YOUR_")) { err("supabaseUrl not set!"); return; }
+      if (!SUPABASE_KEY || SUPABASE_KEY.includes("YOUR_")) { err("supabaseKey not set!"); return; }
 
-      // Run geo + GPS in parallel (GPS waits 2.5s before showing popup)
       const [geo, gps] = await Promise.all([getGeoData(), getGPSLocation()]);
 
       await insertVisit({
@@ -301,6 +294,7 @@
         duration_seconds:  0,
         scroll_depth_pct:  0,
         source:            'none',
+        recipient_tag:     recipientTag,   // null for direct visits, "shaheen-parween" for tagged links
         ...geo,
         ...gps,
       });

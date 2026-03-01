@@ -7,6 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="admin.css"/>
+  <style>
+    .tag-recip { background:#ede9fe; color:#6d28d9; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+  </style>
 </head>
 <body>
 <div class="overlay" id="overlay"></div>
@@ -41,6 +44,10 @@
       <a class="nav-item" data-section="visitors" href="#">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
         Visitors
+      </a>
+      <a class="nav-item" data-section="recipients" href="#">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+        Recipients
       </a>
       <a class="nav-item" data-section="devices" href="#">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/></svg>
@@ -80,7 +87,7 @@
       </select>
     </div>
 
-    <!-- ── OVERVIEW ─────────────────────────────────────── -->
+    <!-- ── OVERVIEW ───────────────────────────────────────── -->
     <section id="section-overview" class="section active">
       <div class="kpi-grid">
         <div class="kpi-card kpi-primary">
@@ -98,11 +105,6 @@
           <div class="kpi-value" id="stat-avgtime">—</div>
           <div class="kpi-sub">per session</div>
         </div>
-        <div class="kpi-card kpi-green">
-          <div class="kpi-label">Conversion Rate</div>
-          <div class="kpi-value" id="cb-rate">0%</div>
-          <div class="kpi-sub">WhatsApp + Phone</div>
-        </div>
         <div class="kpi-card kpi-orange">
           <div class="kpi-label">Avg. Scroll Depth</div>
           <div class="kpi-value" id="stat-scroll">—</div>
@@ -113,28 +115,16 @@
           <div class="kpi-value" id="stat-gps">0</div>
           <div class="kpi-sub" id="stat-gps-pct">of visitors</div>
         </div>
-      </div>
-
-      <div class="conversion-banner">
-        <div class="cb-left">
-          <span class="cb-icon">🎯</span>
-          <div>
-            <div class="cb-title">Contact Conversion Rate</div>
-            <div class="cb-sub">Visitors who clicked WhatsApp or Phone button</div>
-          </div>
-        </div>
-        <div class="cb-stats">
-          <div class="cb-stat"><span class="cb-num" id="stat-wa">0</span><span class="cb-lbl">WhatsApp</span></div>
-          <div class="cb-divider"></div>
-          <div class="cb-stat"><span class="cb-num" id="stat-phone">0</span><span class="cb-lbl">Phone</span></div>
-          <div class="cb-divider"></div>
-          <div class="cb-stat"><span class="cb-num cb-big" id="cb-rate2">0%</span><span class="cb-lbl">Conversion</span></div>
+        <div class="kpi-card kpi-green">
+          <div class="kpi-label">Recipients Clicked</div>
+          <div class="kpi-value" id="stat-recipients">0</div>
+          <div class="kpi-sub">unique tagged links</div>
         </div>
       </div>
 
       <div class="charts-row">
         <div class="chart-card chart-wide">
-          <div class="chart-hdr"><h3>Visits Over Time</h3></div>
+          <div class="chart-hdr"><h3>Visits Over Time</h3><span class="chart-badge">oldest → newest · Y axis on right</span></div>
           <div class="chart-body"><canvas id="chart-timeline"></canvas></div>
         </div>
         <div class="chart-card">
@@ -143,26 +133,26 @@
         </div>
       </div>
       <div class="charts-row">
-        <div class="chart-card">
-          <div class="chart-hdr"><h3>Contact Method</h3><span class="chart-badge">How they reached out</span></div>
-          <div class="chart-body"><canvas id="chart-source"></canvas></div>
+        <div class="chart-card" id="recipients-card">
+          <div class="chart-hdr"><h3>Recipients Activity</h3><span class="chart-badge">tagged link clicks</span></div>
+          <div class="chart-body"><canvas id="chart-recipients"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-hdr"><h3>Visit by Hour</h3><span class="chart-badge">When people visit</span></div>
+          <div class="chart-hdr"><h3>Visit by Hour</h3><span class="chart-badge">when people visit</span></div>
           <div class="chart-body"><canvas id="chart-hours"></canvas></div>
         </div>
       </div>
     </section>
 
-    <!-- ── VISITORS ─────────────────────────────────────── -->
+    <!-- ── VISITORS ───────────────────────────────────────── -->
     <section id="section-visitors" class="section">
       <div class="table-card">
         <div class="table-hdr">
           <div class="table-hdr-left">
-            <h3>Unique Visitors</h3>
+            <h3>All Visitors</h3>
             <span class="count-badge" id="visit-count-badge">0</span>
           </div>
-          <input id="search-input" class="search-input" type="text" placeholder="🔍  Search IP, city, browser…"/>
+          <input id="search-input" class="search-input" type="text" placeholder="🔍  Search IP, city, browser, recipient…"/>
         </div>
         <div class="table-wrap">
           <table>
@@ -176,19 +166,53 @@
                 <th>Browser</th>
                 <th>Time Spent</th>
                 <th>Scroll</th>
-                <th>Source</th>
+                <th>Contact</th>
+                <th>Recipient</th>
                 <th>Visits</th>
               </tr>
             </thead>
             <tbody id="visits-tbody">
-              <tr><td colspan="10" class="empty-cell">Loading…</td></tr>
+              <tr><td colspan="11" class="empty-cell">Loading…</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- ── DEVICES ─────────────────────────────────────── -->
+    <!-- ── RECIPIENTS ─────────────────────────────────────── -->
+    <section id="section-recipients" class="section">
+      <div class="table-card">
+        <div class="table-hdr">
+          <div class="table-hdr-left">
+            <h3>Recipients Tracking</h3>
+          </div>
+        </div>
+        <div style="padding:14px 20px;background:#f8f9fd;border-bottom:1px solid #e8ecf5;font-size:12px;color:#64748b;line-height:1.7">
+          Share personalised links like:&nbsp;
+          <code style="background:#eef2ff;color:#4f46e5;padding:2px 7px;border-radius:5px;font-size:11px">https://altafjava.github.io/biodata/#shaheen-parween</code>
+          &nbsp;— each click is tracked separately below.
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Recipient Tag</th>
+                <th>Visits (Sessions)</th>
+                <th>Last Seen</th>
+                <th>Scroll · Avg Time</th>
+                <th>Contacted Via</th>
+              </tr>
+            </thead>
+            <tbody id="recipients-tbody">
+              <tr><td colspan="6" class="empty-cell">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DEVICES ────────────────────────────────────────── -->
     <section id="section-devices" class="section">
       <div class="charts-row three">
         <div class="chart-card">
@@ -212,7 +236,7 @@
       </div>
     </section>
 
-    <!-- ── GEOGRAPHY ─────────────────────────────────────── -->
+    <!-- ── GEOGRAPHY ──────────────────────────────────────── -->
     <section id="section-geo" class="section">
       <div class="charts-row">
         <div class="chart-card">
@@ -237,7 +261,7 @@
   </main>
 </div>
 
-<!-- Chart.js: primary CDN with automatic fallback -->
+<!-- Chart.js: primary CDN with automatic fallback to jsdelivr -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"
   onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'">
 </script>
