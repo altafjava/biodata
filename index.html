@@ -18,7 +18,14 @@
         <!-- <h1>Marriage Biodata</h1> -->
         <div class="profile-header">
           <h2>Altaf Ansari</h2>
-          <p class="subtitle">Senior Software Engineer at <span class="company">IBM</span></p>
+          <p class="subtitle">Senior Software Engineer at <span class="company ibm-logo-wrap">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/5/51/IBM_logo.svg"
+              alt="IBM"
+              class="ibm-logo-img"
+              onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=\'ibm-fallback\'>IBM</span>');"
+            />
+          </span></p>
           <!-- <p class="subtitle">Working in IT Company</p> -->
           <div class="quick-info">
             <span><i class="fas fa-map-marker-alt"></i> Bengaluru</span>
@@ -198,6 +205,10 @@
 
         <section class="family-background">
           <h3><i class="fas fa-users"></i> Family Background</h3>
+          <div class="family-badges">
+            <span class="family-badge badge-status"><i class="fas fa-scale-balanced"></i> Middle Class</span>
+            <span class="family-badge badge-nuclear"><i class="fas fa-home"></i> Nuclear Family</span>
+          </div>
           <div class="family-info">
             <div class="parents-row">
               <div class="family-member">
