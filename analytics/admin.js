@@ -371,7 +371,8 @@ function initAdmin(cfg) {
     }
     function recipTag(tag) {
       if (!tag) return '<span class="tag tag-none">Direct</span>';
-      return `<span class="tag tag-recip" title="${tag}">🏷️ ${tag}</span>`;
+      // return `<span class="tag tag-recip" title="${tag}">🏷️ ${tag}</span>`;
+      return `<span class="tag tag-recip" title="${tag}">${tag}</span>`;
     }
 
     let html = '';
@@ -413,14 +414,16 @@ function initAdmin(cfg) {
           <div class="detail-visit">
             <div class="dv-num">${i+1}</div>
             <div class="dv-fields">
-              <span class="dv-field"><b>Time</b> ${fmtDate(r.visited_at)}</span>
-              <span class="dv-field"><b>Duration</b> ${fmtDur(r.duration_seconds)}</span>
-              <span class="dv-field"><b>Scroll</b> ${r.scroll_depth_pct?r.scroll_depth_pct+'%':'—'}</span>
-              <span class="dv-field"><b>Contact</b> ${r.source||'none'}</span>
-              <span class="dv-field"><b>GPS</b> ${r.gps_granted?'✅ Granted':'—'}</span>
-              ${r.gps_lat?`<span class="dv-field"><b>GPS Coords</b> ${r.gps_lat.toFixed(5)}, ${r.gps_lng.toFixed(5)}</span>`:''}
-              ${r.gps_accuracy?`<span class="dv-field"><b>Accuracy</b> ±${r.gps_accuracy}m</span>`:''}
-              ${r.recipient_tag?`<span class="dv-field"><b>Recipient</b> 🏷️ ${r.recipient_tag}</span>`:''}
+              <span class="dv-field"><b>⏰</b> ${fmtDate(r.visited_at)}</span>
+              <span class="dv-field"><b>🌎</b> ${r.ipv4||'—'}</span>
+              <span class="dv-field"><b>📍</b> ${[r.city, r.region, r.country].filter(Boolean).join(', ')||'—'}</span>
+              <span class="dv-field"><b>📱</b> ${r.device_type||'—'}</span>
+              <span class="dv-field"><b>🌐</b> ${r.browser||'—'}</span>
+              <span class="dv-field"><b>⏳</b> ${fmtDur(r.duration_seconds)}</span>
+              <span class="dv-field"><b>⬆️</b> ${r.scroll_depth_pct?r.scroll_depth_pct+'%':'—'}</span>
+              <span class="dv-field"><b>📞</b> ${r.source||'none'}</span>
+              <span class="dv-field"><b>📡</b> ${r.gps_granted?'✅':'—'}${r.gps_lat?` ${r.gps_lat.toFixed(4)},${r.gps_lng.toFixed(4)} ±${r.gps_accuracy}m`:''}</span>
+              ${r.recipient_tag?`<span class="dv-field"><b>🏷️</b> ${r.recipient_tag}</span>`:''}
             </div>
           </div>`).join('');
 

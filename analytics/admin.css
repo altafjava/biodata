@@ -349,11 +349,11 @@ tbody td{padding:11px 14px;max-width:160px;overflow:hidden;text-overflow:ellipsi
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-.dv-fields { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.dv-fields { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 .dv-field {
   font-size: 12px; color: var(--text2);
 }
-.dv-field b { color: var(--text); font-weight: 600; margin-right: 4px; }
+.dv-field b { color: var(--text); font-weight: 600; margin-right: 2px; }
 
 /* Inline utility classes used in JS */
 .mono   { font-family: var(--mono) !important; }
