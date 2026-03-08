@@ -277,60 +277,86 @@ function initAdmin(cfg) {
       const vals  = allRecipCounts.map(r => r[1]);
       const bg    = label.map((_, i) => P[i % P.length]);
 
-      // Smart label rotation: vertical (90°) when many bars, horizontal when few
-      const rotate = totalRecip > 8 ? 90 : 0;
-      // Taller chart body when labels are rotated to give room
+      const isMobile = window.innerWidth < 768;
       const body = document.getElementById('recipients-chart-body');
-      body.style.paddingBottom = rotate === 90 ? '60px' : '16px';
+      const canvas = document.getElementById('chart-recipients');
+      const listEl = document.getElementById('recipients-list');
 
-      if (charts['chart-recipients']) charts['chart-recipients'].destroy();
-      const ctx = document.getElementById('chart-recipients');
-      if (!ctx) return;
+      if (charts['chart-recipients']) { charts['chart-recipients'].destroy(); }
 
-      charts['chart-recipients'] = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: label,
-          datasets: [{
-            data: vals,
-            backgroundColor: bg,
-            borderRadius: 6,
-            borderWidth: 0,
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: true,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#0f1221',
-              borderColor: 'rgba(255,255,255,0.08)',
-              borderWidth: 1, padding: 10, cornerRadius: 8,
-              callbacks: {
-                label: c => ` ${c.parsed.y} visit${c.parsed.y !== 1 ? 's' : ''}`
+      if (isMobile) {
+        // ── Mobile: pure HTML/CSS bar list — no Chart.js overlap issues ──
+        canvas.style.display = 'none';
+        listEl.style.display = 'flex';
+        body.style.padding = '12px 16px';
+
+        const maxVal = Math.max(...vals, 1);
+        listEl.innerHTML = allRecipCounts.map(([tag, count], i) => `
+          <div class="rl-row">
+            <span class="rl-index">${i + 1}</span>
+            <span class="rl-label" title="${tag}">${tag}</span>
+            <div class="rl-bar-wrap">
+              <div class="rl-bar" style="width:${Math.round((count/maxVal)*100)}%;background:${bg[i % bg.length]}"></div>
+            </div>
+            <span class="rl-count">${count}</span>
+          </div>`).join('');
+
+      } else {
+        // ── Desktop: vertical bar Chart.js (unchanged) ──
+        canvas.style.display = '';
+        listEl.style.display = 'none';
+
+        const rotate = totalRecip > 8 ? 90 : 0;
+        body.style.height = '';
+        body.style.padding = '';
+        body.style.paddingBottom = rotate === 90 ? '60px' : '16px';
+
+        if (!canvas) return;
+        charts['chart-recipients'] = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: label,
+            datasets: [{
+              data: vals,
+              backgroundColor: bg,
+              borderRadius: 6,
+              borderWidth: 0,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#0f1221',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderWidth: 1, padding: 10, cornerRadius: 8,
+                callbacks: {
+                  label: c => ` ${c.parsed.y} visit${c.parsed.y !== 1 ? 's' : ''}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  font: { size: totalRecip > 12 ? 9 : 11 },
+                  maxRotation: rotate,
+                  minRotation: rotate,
+                  autoSkip: false,
+                },
+              },
+              y: {
+                grid: { color: '#f0f2f8' },
+                beginAtZero: true,
+                ticks: { font: { size: 10 }, stepSize: 1 },
+                position: 'right',
               }
             }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                font: { size: totalRecip > 12 ? 9 : 11 },
-                maxRotation: rotate,
-                minRotation: rotate,
-                autoSkip: false,   // always show all labels
-              },
-            },
-            y: {
-              grid: { color: '#f0f2f8' },
-              beginAtZero: true,
-              ticks: { font: { size: 10 }, stepSize: 1 },
-              position: 'right',
-            }
           }
-        }
-      });
+        });
+      }
     } else {
       recipCard.style.display = 'none';
     }

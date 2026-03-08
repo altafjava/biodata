@@ -229,6 +229,65 @@ tbody td{padding:11px 14px;max-width:160px;overflow:hidden;text-overflow:ellipsi
 .tag-repeat  {background:#fef9c3;color:#854d0e}
 .tag-new     {background:var(--indigo-l);color:var(--indigo)}
 
+/* ── Mobile Recipients HTML List ──────────────────────────── */
+.recipients-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.rl-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rl-index {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+  width: 18px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.rl-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  width: 140px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rl-bar-wrap {
+  flex: 1;
+  height: 14px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rl-bar {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 4px;
+}
+
+.rl-count {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  color: var(--text);
+  width: 22px;
+  flex-shrink: 0;
+  text-align: left;
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
