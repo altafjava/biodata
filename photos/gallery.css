@@ -1,0 +1,399 @@
+/* ═══════════════════════════════════════════════════════════
+   GALLERY  ·  photos/gallery.css
+═══════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   INDEX PAGE — Banner + FAB
+═══════════════════════════════════════════════════════════ */
+
+/* ── "View Photos" Banner — biodata gradient theme ── */
+.photo-entry-banner {
+  display: flex;
+  align-items: center;
+  margin: 20px 12px 20px;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  text-decoration: none;
+  background: linear-gradient(135deg, #2962ff 0%, #8b1fc8 50%, #d90e5f 100%);
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.18) inset,
+    0 8px 30px rgba(41,98,255,0.38),
+    0 4px 16px rgba(217,14,95,0.22);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+  position: relative;
+}
+.photo-entry-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.1) 0%,
+    transparent 55%,
+    rgba(0,0,0,0.08) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+.photo-entry-banner:active  { transform: scale(0.972); }
+.photo-entry-banner:hover {
+  box-shadow:
+    0 2px 0 rgba(255,255,255,0.22) inset,
+    0 12px 40px rgba(41,98,255,0.5),
+    0 6px 20px rgba(217,14,95,0.32);
+}
+
+.peb-icon {
+  position: relative; z-index: 2;
+  width: 70px; height: 70px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  background: rgba(0,0,0,0.14);
+  border-right: 1px solid rgba(255,255,255,0.14);
+}
+.peb-icon svg  { display: none; }
+.peb-icon::after { content: '📷'; }
+
+.peb-content {
+  position: relative; z-index: 2;
+  flex: 1;
+  padding: 14px 10px 14px 18px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.peb-text {
+  font-family: 'Poppins', sans-serif;
+  font-size: 1rem; font-weight: 600;
+  color: #fff; letter-spacing: 0.01em; line-height: 1.2;
+}
+.peb-count {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.78rem; font-weight: 400;
+  color: rgba(255,255,255,0.78); letter-spacing: 0.02em;
+}
+
+.peb-arrow {
+  position: relative; z-index: 2;
+  width: 50px; height: 70px;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; font-weight: 300;
+  color: rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.12);
+  border-left: 1px solid rgba(255,255,255,0.14);
+  transition: background 0.2s;
+}
+.photo-entry-banner:hover .peb-arrow { background: rgba(0,0,0,0.2); }
+
+
+/* ── Premium FAB — sleek vertical pill, right edge ── */
+.gallery-fab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 999;
+  /* Slim pill shape */
+  width: 42px;
+  height: 80px;
+  border-radius: 22px 0 0 22px;
+  background: linear-gradient(170deg, #2962ff 0%, #c0176a 100%);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #fff;
+  padding: 0;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: visible;
+  /* Inset top highlight + colored glow */
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.28),
+    inset -1px 0 0 rgba(255,255,255,0.08),
+    -3px 0 18px rgba(41,98,255,0.45),
+    -1px 0 32px rgba(192,23,106,0.3);
+  animation: fab-slide 3.5s ease-in-out infinite;
+}
+
+/* Subtle shimmer ring that pulses out from the left edge */
+.gallery-fab::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(170deg, #2962ff, #c0176a);
+  animation: fab-ring 2.8s ease-out infinite;
+  z-index: -1;
+}
+.gallery-fab::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(170deg, #2962ff, #c0176a);
+  animation: fab-ring 2.8s ease-out infinite 1.4s;
+  z-index: -1;
+}
+
+@keyframes fab-slide {
+  0%, 100% { transform: translateY(-50%) translateX(0px); }
+  50%       { transform: translateY(-50%) translateX(-4px); }
+}
+@keyframes fab-ring {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+.gallery-fab:hover {
+  animation-play-state: paused;
+  transform: translateY(-50%) translateX(-6px) scale(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.35),
+    -5px 0 28px rgba(41,98,255,0.65),
+    -2px 0 48px rgba(192,23,106,0.5);
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.28s;
+}
+.gallery-fab:hover::before,
+.gallery-fab:hover::after { animation-play-state: paused; }
+.gallery-fab:active {
+  transform: translateY(-50%) translateX(-3px) scale(0.95);
+  transition: transform 0.1s ease;
+}
+
+/* Icon only — no text label, cleaner */
+.gallery-fab i {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.35));
+}
+/* Hide the "PHOTOS" label — icon alone is cleaner on a slim pill */
+.gallery-fab span { display: none; }
+
+/* Tooltip */
+.gallery-fab-tooltip {
+  position: fixed;
+  right: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(10,10,18,0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.72rem; font-weight: 500;
+  padding: 7px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 998;
+  border: 1px solid rgba(255,255,255,0.12);
+  animation: fab-tip 3.5s ease forwards;
+}
+@keyframes fab-tip {
+  0%   { opacity:0; transform:translateY(-50%) translateX(8px); }
+  18%  { opacity:1; transform:translateY(-50%) translateX(0); }
+  72%  { opacity:1; }
+  100% { opacity:0; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   PHOTOS PAGE — Full-screen Viewer
+═══════════════════════════════════════════════════════════ */
+
+body.gl-page {
+  margin: 0; padding: 0;
+  overflow: hidden;
+  background: #000;
+  font-family: 'Poppins', sans-serif;
+}
+
+.gl-ui-layer {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* ── ALL overlay elements: same dark semi-transparent pill ──
+   rgba(0,0,0,0.38) bg + white border, no backdrop-filter needed
+── */
+
+.gl-back-pill {
+  position: absolute;
+  top: 16px; left: 14px;
+  pointer-events: auto;
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 16px 9px 12px;
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 100px;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s, transform 0.2s;
+}
+.gl-back-pill:hover,
+.gl-back-pill:active { background: rgba(0,0,0,0.58); }
+.gl-back-pill:active { transform: scale(0.94); }
+.gl-back-pill i { font-size: 11px; opacity: 0.85; }
+
+.gl-counter-pill {
+  position: absolute;
+  top: 16px; right: 14px;
+  pointer-events: none;
+  padding: 9px 18px;
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 100px;
+  color: #fff;
+  font-family: 'Poppins', sans-serif;
+  font-size: 13px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+/* ── Viewer ── */
+.gl-viewer {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #000;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.gl-photo-bg {
+  position: absolute;
+  inset: -20px;
+  width: calc(100% + 40px);
+  height: calc(100% + 40px);
+  object-fit: cover;
+  filter: blur(50px) brightness(0.28) saturate(1.8);
+  pointer-events: none; user-select: none;
+}
+
+.gl-photo-main {
+  position: relative; z-index: 2;
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  user-select: none; -webkit-user-drag: none;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+.gl-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+  color: rgba(255,255,255,0.5);
+  font-size: 1.6rem;
+}
+
+/* ── Nav buttons: half-pill attached to screen edge ── */
+.gl-nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 500;
+  width: 38px;
+  height: 76px;
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1;
+  transition: background 0.18s, opacity 0.25s;
+}
+.gl-nav-prev {
+  left: 0;
+  border-radius: 0 44px 44px 0;
+  border-left: none;
+  padding-right: 2px;
+}
+.gl-nav-next {
+  right: 0;
+  border-radius: 44px 0 0 44px;
+  border-right: none;
+  padding-left: 2px;
+}
+.gl-nav-btn:hover  { background: rgba(0,0,0,0.58); }
+.gl-nav-btn:active { opacity: 0.65; }
+.gl-nav-btn[disabled] { opacity: 0; pointer-events: none; }
+
+/* ── Dots ── */
+.gl-dots {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 100px;
+}
+
+.gl-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  border: none; padding: 0; outline: none;
+  flex-shrink: 0;
+}
+.gl-dot.active {
+  width: 24px; border-radius: 4px;
+  background: #fff;
+}
+.gl-dot:not(.active):hover {
+  background: rgba(255,255,255,0.65);
+  transform: scale(1.2);
+}
+
+/* ── Zoom hint ── */
+.gl-hint {
+  position: fixed;
+  bottom: 82px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.38);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.92);
+  font-family: 'Poppins', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 8px 16px;
+  border-radius: 100px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  animation: gl-hint-fade 4.2s ease forwards;
+}
+@keyframes gl-hint-fade {
+  0%   { opacity:0; transform:translateX(-50%) translateY(6px); }
+  14%  { opacity:1; transform:translateX(-50%) translateY(0); }
+  78%  { opacity:1; }
+  100% { opacity:0; }
+}
+
+@media (max-width: 480px) {
+  .gl-nav-btn { width: 34px; height: 68px; font-size: 1.4rem; }
+}

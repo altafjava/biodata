@@ -289,6 +289,35 @@
       trackSessionEnd();
     }
 
+    // ── Gallery Analytics Bridge ──────────────────────────────
+    window._galleryAnalytics = {
+      trackEvent: async function(data) {
+        if (!visitId) return;
+        try {
+          await supabaseFetch('/rest/v1/photo_events', {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'apikey':         SUPABASE_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_KEY,
+              'Prefer':         'return=minimal'
+            },
+            body: JSON.stringify({
+              session_id:       sessionId,
+              visited_at:       new Date().toISOString(),
+              photo_name:       data.photo_name       || null,
+              photo_index:      data.photo_index !== undefined ? data.photo_index : null,
+              event_type:       data.event_type        || 'view',
+              duration_seconds: data.duration_seconds  || 0,
+              recipient_tag:    recipientTag,
+              device_type:      getDeviceType(),
+              ipv4:             null,
+            }),
+          });
+        } catch(e) { /* silent */ }
+      }
+    };
+
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
     else init();
   });

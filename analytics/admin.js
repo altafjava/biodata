@@ -568,20 +568,143 @@ function initAdmin(cfg) {
       </tr>`).join('');
   }
 
+  // ── Gallery Data ──────────────────────────────────────────
+  async function fetchPhotoEvents(period) {
+    let path = `/rest/v1/photo_events?select=*&order=visited_at.asc`;
+    if (period === 'today') {
+      const t = new Date(); t.setHours(0,0,0,0);
+      path += `&visited_at=gte.${t.toISOString()}`;
+    } else if (period !== 'all') {
+      path += `&visited_at=gte.${new Date(Date.now()-parseInt(period)*86400000).toISOString()}`;
+    }
+    path += `&limit=5000`;
+    const res = await supabaseFetch(path, { headers:{} });
+    if (!res.ok) return []; 
+    return res.json();
+  }
+
+  function renderGallery(events) {
+    if (!events || !events.length) {
+      const tb = document.getElementById('gl-table');
+      if(tb) tb.querySelector('tbody').innerHTML = '<tr><td colspan="5" class="empty-cell">No gallery activity yet.</td></tr>';
+      return;
+    }
+
+    const views     = events.filter(e => e.event_type === 'view');
+    const zooms     = events.filter(e => e.event_type === 'zoom');
+    const downloads = events.filter(e => e.event_type === 'download_attempt');
+    const unique    = new Set(events.map(e => e.session_id)).size;
+    
+    countUp(document.getElementById('gl-stat-views'), views.length);
+    countUp(document.getElementById('gl-stat-opens'), unique);
+    countUp(document.getElementById('gl-stat-zooms'), zooms.length);
+    countUp(document.getElementById('gl-stat-downloads'), downloads.length);
+    countUp(document.getElementById('gl-stat-unique'), unique);
+
+    const ends = events.filter(e => e.event_type === 'view_end' && e.duration_seconds > 0);
+    const avg = ends.length ? Math.round(ends.reduce((a,b)=>a+b.duration_seconds,0)/ends.length) : 0;
+    const elAvg = document.getElementById('gl-stat-avg');
+    if(elAvg) elAvg.textContent = fmtDur(avg);
+
+    // Timeline
+    const byDay = {};
+    const orderedDays = [];
+    views.forEach(r => {
+      const d = new Date(r.visited_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+      if (!byDay[d]) { byDay[d] = 0; orderedDays.push(d); }
+      byDay[d]++;
+    });
+    makeChart('gl-chart-timeline', 'line', orderedDays, orderedDays.map(k=>byDay[k]));
+
+    // Photos
+    const photoStats = {};
+    events.forEach(e => {
+      const p = e.photo_name || 'unknown';
+      if (!photoStats[p]) photoStats[p] = { views:0, zooms:0, downloads:0, dur:0, durCnt:0 };
+      if (e.event_type === 'view') photoStats[p].views++;
+      if (e.event_type === 'zoom') photoStats[p].zooms++;
+      if (e.event_type === 'download_attempt') photoStats[p].downloads++;
+      if (e.event_type === 'view_end' && e.duration_seconds > 0) {
+        photoStats[p].dur += e.duration_seconds;
+        photoStats[p].durCnt++;
+      }
+    });
+
+    const sortedPhotos = Object.entries(photoStats).sort((a,b) => b[1].views - a[1].views);
+    
+    makeChart('gl-chart-photos', 'bar', 
+      sortedPhotos.map(p => p[0].replace('photo','').replace(/\..*/,'')),
+      sortedPhotos.map(p => p[1].views),
+      { indexAxis: 'y' }
+    );
+
+    const tbody = document.getElementById('gl-table').querySelector('tbody');
+    tbody.innerHTML = sortedPhotos.map(([name, s]) => `
+      <tr>
+        <td class="mono" style="font-size:0.85rem">${name}</td>
+        <td class="mono">${s.views}</td>
+        <td class="mono">${fmtDur(s.durCnt ? Math.round(s.dur/s.durCnt) : 0)}</td>
+        <td class="mono">${s.zooms}</td>
+        <td class="mono">${s.downloads}</td>
+      </tr>
+    `).join('');
+
+    // ── Per-Recipient Gallery Breakdown ──
+    const recipGalleryEl = document.getElementById('gl-recip-tbody');
+    if (recipGalleryEl) {
+      const taggedEvents = events.filter(e => e.recipient_tag);
+      if (!taggedEvents.length) {
+        recipGalleryEl.innerHTML = '<tr><td colspan="6" class="empty-cell">No tagged recipient activity yet.</td></tr>';
+      } else {
+        const rmap = {};
+        taggedEvents.forEach(e => {
+          const t = e.recipient_tag;
+          if (!rmap[t]) rmap[t] = { tag:t, views:0, zooms:0, downloads:0, dur:0, durCnt:0, lastSeen:e.visited_at };
+          if (e.event_type === 'view')             rmap[t].views++;
+          if (e.event_type === 'zoom')             rmap[t].zooms++;
+          if (e.event_type === 'download_attempt') rmap[t].downloads++;
+          if (e.event_type === 'view_end' && e.duration_seconds > 0) {
+            rmap[t].dur += e.duration_seconds; rmap[t].durCnt++;
+          }
+          if (e.visited_at > rmap[t].lastSeen) rmap[t].lastSeen = e.visited_at;
+        });
+        const sortedR = Object.values(rmap).sort((a,b)=>b.views - a.views);
+        recipGalleryEl.innerHTML = sortedR.map((r,i) => `
+          <tr>
+            <td class="mono muted">${i+1}</td>
+            <td style="font-weight:600;color:#4f46e5">🏷️ ${r.tag}</td>
+            <td class="mono">${r.views}</td>
+            <td class="mono">${r.zooms>0?'<span style="color:#059669;font-size:10px">'+r.zooms+' ✓</span>':'—'}</td>
+            <td class="mono">${fmtDur(r.durCnt?Math.round(r.dur/r.durCnt):0)}</td>
+            <td class="mono">${r.downloads>0?'<span style="color:#d97706">⬇ '+r.downloads+'</span>':'—'}</td>
+          </tr>`).join('');
+      }
+    }
+  }
+
   // ── Load ───────────────────────────────────────────────────
   let allRows=[];
+  let allGallery=[];
   async function loadData() {
     const period=document.getElementById('date-filter').value;
     document.getElementById('visits-tbody').innerHTML=
       '<tr><td colspan="11" class="empty-cell">⏳ Loading…</td></tr>';
     try {
-      allRows=await fetchVisits(period);
+      const [visits, gallery] = await Promise.all([
+        fetchVisits(period),
+        fetchPhotoEvents(period)
+      ]);
+      allRows=visits;
+      allGallery=gallery;
+
       expandedSessions.clear();
       renderOverview(allRows);
       renderTable(allRows);
       renderRecipients(allRows);
       renderDevices(allRows);
       renderGeo(allRows);
+      renderGallery(allGallery);
+
       document.getElementById('last-updated').textContent=
         new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     } catch(e) {
@@ -608,7 +731,8 @@ function initAdmin(cfg) {
     visitors:'All visitors — click any row to expand',
     recipients:'Track who clicked your shared links',
     devices:'Device & browser breakdown',
-    geo:'Location & ISP data'
+    geo:'Location & ISP data',
+    gallery:'Photo engagement stats'
   };
   document.querySelectorAll('.nav-item').forEach(item=>{
     item.addEventListener('click',e=>{
@@ -624,6 +748,7 @@ function initAdmin(cfg) {
         if(sec==='devices')    renderDevices(allRows);
         if(sec==='geo')        renderGeo(allRows);
         if(sec==='recipients') renderRecipients(allRows);
+        if(sec==='gallery')    renderGallery(allGallery);
       }
     });
   });

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marriage Biodata - Altaf Ansari</title>
+    <link rel="stylesheet" href="photos/gallery.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -242,6 +243,28 @@
           </div>
         </section>
       </main>
+      
+      <a id="photo-banner" class="photo-entry-banner" href="photos.html">
+        <span class="peb-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="7" width="18" height="13" rx="2"/>
+            <path d="M16 3l-4 4-4-4"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+        </span>
+        <div class="peb-content">
+          <span class="peb-text">View Photos</span>
+          <span class="peb-count" id="peb-count-text">Loading...</span>
+        </div>
+        <span class="peb-arrow">›</span>
+      </a>
     </div>
+
+    <button class="gallery-fab" id="gallery-fab"
+            onclick="window.location.href='photos.html'" aria-label="View photos">
+      <i class="fas fa-camera"></i>
+      <span>Photos</span>
+    </button>
+  <script src="photos/gallery.js" defer></script>
   </body>
 </html>

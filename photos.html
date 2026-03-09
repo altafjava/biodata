@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#000000" />
+  <title>Gallery — Altaf Ansari</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="photos/gallery.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="analytics/config.js"></script>
+  <script src="analytics/biodata.js"></script>
+  <script src="photos/gallery.js" defer></script>
+</head>
+<body class="gl-page">
+
+  <!-- Floating UI Layer -->
+  <div class="gl-ui-layer">
+    <button class="gl-back-pill" onclick="window.location.href='index.html'" aria-label="Back to biodata">
+      <i class="fas fa-chevron-left"></i>
+      <span>Biodata</span>
+    </button>
+    <div class="gl-counter-pill" id="gl-counter-pill">1 / 1</div>
+  </div>
+
+  <!-- Full-screen viewer -->
+  <div class="gl-viewer" id="gl-viewer">
+    <div class="gl-loading" id="gl-loading">
+      <i class="fas fa-circle-notch fa-spin"></i>
+    </div>
+  </div>
+
+  <!-- Half-pill nav buttons attached to screen edges -->
+  <button class="gl-nav-btn gl-nav-prev" id="gl-nav-prev" aria-label="Previous photo">&#8249;</button>
+  <button class="gl-nav-btn gl-nav-next" id="gl-nav-next" aria-label="Next photo">&#8250;</button>
+
+  <!-- Dot indicators -->
+  <div class="gl-dots" id="gl-dots"></div>
+
+</body>
+</html>
