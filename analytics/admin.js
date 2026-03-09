@@ -112,6 +112,25 @@ function initAdmin(cfg) {
     return res.json();
   }
 
+  // ── Fetch photo_events ─────────────────────────────────────
+  async function fetchPhotoEvents(period) {
+    let path = `/rest/v1/photo_events?select=*&order=visited_at.asc`;
+    if (period === 'today') {
+      const t = new Date(); t.setHours(0,0,0,0);
+      path += `&visited_at=gte.${t.toISOString()}`;
+    } else if (period !== 'all') {
+      path += `&visited_at=gte.${new Date(Date.now()-parseInt(period)*86400000).toISOString()}`;
+    }
+    path += `&limit=10000`;
+    try {
+      const res = await supabaseFetch(path, { headers:{} });
+      if (!res.ok) return [];
+      return res.json();
+    } catch(e) {
+      return [];
+    }
+  }
+
   // ── Helpers ────────────────────────────────────────────────
   function countBy(arr, key) {
     const m={};
@@ -208,7 +227,7 @@ function initAdmin(cfg) {
   }
 
   // ── Overview ───────────────────────────────────────────────
-  function renderOverview(rows) {
+  function renderOverview(rows, photoRows) {
     const total    = rows.length;
     const sessions = new Set(rows.map(r=>r.session_id));
     const unique   = sessions.size;
@@ -219,7 +238,6 @@ function initAdmin(cfg) {
     const avgScrl  = scrls.length?Math.round(scrls.reduce((a,b)=>a+b,0)/scrls.length):0;
     const todayCnt = rows.filter(r=>new Date(r.visited_at).toDateString()===new Date().toDateString()).length;
     const gpsCnt   = rows.filter(r=>r.gps_granted).length;
-    // Unique recipients who clicked (non-null recipient_tag)
     const recipientClicks = new Set(rows.filter(r=>r.recipient_tag).map(r=>r.recipient_tag)).size;
 
     countUp(document.getElementById('stat-total'),  total);
@@ -233,10 +251,23 @@ function initAdmin(cfg) {
     document.getElementById('stat-scroll').textContent     = avgScrl?`${avgScrl}%`:'—';
     document.getElementById('stat-gps-pct').textContent    = unique?`${Math.round(gpsCnt/unique*100)}% of visitors`:'of visitors';
 
-    // ── Visits Over Time: sorted oldest→newest, Y axis on RIGHT ──
-    // rows already sorted asc from fetchVisits (order=visited_at.asc)
+    // Photo Views + Zooms KPIs (shown if photo_events data exists)
+    const photoViews = photoRows.filter(r=>r.event_type==='view').length;
+    const photoZooms = photoRows.filter(r=>r.event_type==='zoom').length;
+    const zoomRate   = photoViews ? Math.round(photoZooms/photoViews*100) : 0;
+    const pvEl = document.getElementById('stat-photo-views');
+    const pzEl = document.getElementById('stat-photo-zooms');
+    const pvCard = document.getElementById('kpi-photo-views');
+    const pzCard = document.getElementById('kpi-photo-zooms');
+    if (pvCard) pvCard.style.display = photoRows.length ? '' : 'none';
+    if (pzCard) pzCard.style.display = photoRows.length ? '' : 'none';
+    if (pvEl) countUp(pvEl, photoViews);
+    if (pzEl) { countUp(pzEl, photoZooms); }
+    const pzSub = document.getElementById('stat-photo-zooms-sub');
+    if (pzSub) pzSub.textContent = photoViews ? `${zoomRate}% zoom rate` : '—';
+
+    // ── Visits Over Time ──
     const byDay = {};
-    // Build ordered keys from sorted rows
     const orderedDays = [];
     rows.forEach(r => {
       const d = new Date(r.visited_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
@@ -249,7 +280,7 @@ function initAdmin(cfg) {
     const refs=countBy(rows,'referrer').slice(0,6);
     makeChart('chart-referrer','doughnut',refs.map(r=>r[0]),refs.map(r=>r[1]));
 
-    // Recipients Activity chart — all recipients, last 7 days, vertical bars
+    // Recipients Activity chart — last 7 days
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
     const recipRows7   = rows.filter(r => r.recipient_tag && new Date(r.visited_at) >= sevenDaysAgo);
     const recipCard    = document.getElementById('recipients-card');
@@ -257,7 +288,6 @@ function initAdmin(cfg) {
     const recipToggle  = document.getElementById('recipients-toggle');
 
     if (recipRows7.length > 0) {
-      // Group by tag, sort by most recent visit (not by count)
       const recipTagMap = {};
       recipRows7.forEach(r => {
         const t = r.recipient_tag;
@@ -266,12 +296,12 @@ function initAdmin(cfg) {
         if (r.visited_at > recipTagMap[t].lastSeen) recipTagMap[t].lastSeen = r.visited_at;
       });
       const allRecipCounts = Object.values(recipTagMap)
-        .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))  // newest first
+        .sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen))
         .map(r => [r.tag, r.count]);
       const totalRecip     = allRecipCounts.length;
       recipCard.style.display = '';
       recipBadge.textContent  = `last 7 days · ${totalRecip} recipient${totalRecip !== 1 ? 's' : ''}`;
-      recipToggle.style.display = 'none'; // no toggle — show all always
+      recipToggle.style.display = 'none';
 
       const label = allRecipCounts.map(r => r[0]);
       const vals  = allRecipCounts.map(r => r[1]);
@@ -285,11 +315,9 @@ function initAdmin(cfg) {
       if (charts['chart-recipients']) { charts['chart-recipients'].destroy(); }
 
       if (isMobile) {
-        // ── Mobile: pure HTML/CSS bar list — no Chart.js overlap issues ──
         canvas.style.display = 'none';
         listEl.style.display = 'flex';
         body.style.padding = '12px 16px';
-
         const maxVal = Math.max(...vals, 1);
         listEl.innerHTML = allRecipCounts.map(([tag, count], i) => `
           <div class="rl-row">
@@ -300,59 +328,36 @@ function initAdmin(cfg) {
             </div>
             <span class="rl-count">${count}</span>
           </div>`).join('');
-
       } else {
-        // ── Desktop: vertical bar Chart.js (unchanged) ──
         canvas.style.display = '';
         listEl.style.display = 'none';
-
         const rotate = totalRecip > 8 ? 90 : 0;
         body.style.height = '';
         body.style.padding = '';
         body.style.paddingBottom = rotate === 90 ? '60px' : '16px';
-
         if (!canvas) return;
         charts['chart-recipients'] = new Chart(canvas, {
           type: 'bar',
           data: {
             labels: label,
-            datasets: [{
-              data: vals,
-              backgroundColor: bg,
-              borderRadius: 6,
-              borderWidth: 0,
-            }]
+            datasets: [{ data: vals, backgroundColor: bg, borderRadius: 6, borderWidth: 0 }]
           },
           options: {
-            responsive: true,
-            maintainAspectRatio: true,
+            responsive: true, maintainAspectRatio: true,
             plugins: {
               legend: { display: false },
               tooltip: {
-                backgroundColor: '#0f1221',
-                borderColor: 'rgba(255,255,255,0.08)',
+                backgroundColor: '#0f1221', borderColor: 'rgba(255,255,255,0.08)',
                 borderWidth: 1, padding: 10, cornerRadius: 8,
-                callbacks: {
-                  label: c => ` ${c.parsed.y} visit${c.parsed.y !== 1 ? 's' : ''}`
-                }
+                callbacks: { label: c => ` ${c.parsed.y} visit${c.parsed.y !== 1 ? 's' : ''}` }
               }
             },
             scales: {
               x: {
                 grid: { display: false },
-                ticks: {
-                  font: { size: totalRecip > 12 ? 9 : 11 },
-                  maxRotation: rotate,
-                  minRotation: rotate,
-                  autoSkip: false,
-                },
+                ticks: { font: { size: totalRecip > 12 ? 9 : 11 }, maxRotation: rotate, minRotation: rotate, autoSkip: false },
               },
-              y: {
-                grid: { color: '#f0f2f8' },
-                beginAtZero: true,
-                ticks: { font: { size: 10 }, stepSize: 1 },
-                position: 'right',
-              }
+              y: { grid: { color: '#f0f2f8' }, beginAtZero: true, ticks: { font: { size: 10 }, stepSize: 1 }, position: 'right' }
             }
           }
         });
@@ -371,7 +376,6 @@ function initAdmin(cfg) {
   let expandedSessions = new Set();
 
   function renderTable(rows) {
-    // Sort rows desc for display (newest first)
     const sortedRows = [...rows].sort((a,b)=>new Date(b.visited_at)-new Date(a.visited_at));
     document.getElementById('visit-count-badge').textContent = sortedRows.length;
     const tbody = document.getElementById('visits-tbody');
@@ -397,7 +401,6 @@ function initAdmin(cfg) {
     }
     function recipTag(tag) {
       if (!tag) return '<span class="tag tag-none">Direct</span>';
-      // return `<span class="tag tag-recip" title="${tag}">🏷️ ${tag}</span>`;
       return `<span class="tag tag-recip" title="${tag}">${tag}</span>`;
     }
 
@@ -414,7 +417,6 @@ function initAdmin(cfg) {
       const maxScroll  = Math.max(...sessionRows.map(r=>r.scroll_depth_pct||0));
       const gpsRow     = sessionRows.find(r=>r.gps_granted);
       const location   = [latest.city, latest.country].filter(Boolean).join(', ') || '—';
-      // Use latest non-null recipient_tag across all visits
       const tag        = sessionRows.map(r=>r.recipient_tag).find(t=>t) || null;
 
       html += `<tr class="session-row${isExpanded?' session-expanded':''}" data-session="${sessionId}">
@@ -505,7 +507,6 @@ function initAdmin(cfg) {
       return;
     }
 
-    // Group by recipient_tag
     const map = {};
     tagged.forEach(r => {
       const t = r.recipient_tag;
@@ -515,15 +516,13 @@ function initAdmin(cfg) {
       if (r.visited_at > map[t].lastSeen)  map[t].lastSeen  = r.visited_at;
     });
 
-    const sorted = Object.values(map).sort((a,b) => new Date(b.lastSeen) - new Date(a.lastSeen)); // newest first
+    const sorted = Object.values(map).sort((a,b) => new Date(b.lastSeen) - new Date(a.lastSeen));
 
     tbody.innerHTML = sorted.map((rec, i) => {
       const v         = rec.visits;
       const sessions  = new Set(v.map(r=>r.session_id)).size;
       const maxScroll = Math.max(...v.map(r=>r.scroll_depth_pct||0));
       const totalDur  = v.reduce((s,r)=>s+(r.duration_seconds||0),0);
-
-      // Contact: prefer whatsapp > phone > none
       const waRow = v.find(r=>r.source==='whatsapp');
       const phRow = v.find(r=>r.source==='phone');
       const src   = waRow ? '<span class="tag tag-wa">💬 WhatsApp</span>'
@@ -568,20 +567,104 @@ function initAdmin(cfg) {
       </tr>`).join('');
   }
 
+  // ── Gallery ────────────────────────────────────────────────
+  function renderGallery(photoRows) {
+    if (!photoRows || !photoRows.length) {
+      const el = document.getElementById('gallery-empty');
+      if (el) el.style.display = '';
+      const content = document.getElementById('gallery-content');
+      if (content) content.style.display = 'none';
+      return;
+    }
+
+    const emptyEl = document.getElementById('gallery-empty');
+    if (emptyEl) emptyEl.style.display = 'none';
+    const content = document.getElementById('gallery-content');
+    if (content) content.style.display = '';
+
+    const views      = photoRows.filter(r => r.event_type === 'view');
+    const lbOpens    = photoRows.filter(r => r.event_type === 'lightbox_open');
+    const zooms      = photoRows.filter(r => r.event_type === 'zoom');
+    const downloads  = photoRows.filter(r => r.event_type === 'download_attempt');
+    const viewEnds   = photoRows.filter(r => r.event_type === 'view_end');
+    const avgViewDur = viewEnds.length
+      ? Math.round(viewEnds.reduce((s,r) => s + (r.duration_seconds||0), 0) / viewEnds.length)
+      : 0;
+    const uniqueViewers = new Set(views.map(r => r.session_id)).size;
+
+    countUp(document.getElementById('stat-gl-views'),    views.length);
+    countUp(document.getElementById('stat-gl-lb'),       lbOpens.length);
+    countUp(document.getElementById('stat-gl-zooms'),    zooms.length);
+    countUp(document.getElementById('stat-gl-downloads'),downloads.length);
+    const durEl = document.getElementById('stat-gl-avgdur');
+    if (durEl) durEl.textContent = fmtDur(avgViewDur);
+    countUp(document.getElementById('stat-gl-unique'), uniqueViewers);
+
+    // ── Per-photo table ──
+    const photoMap = {};
+    photoRows.forEach(r => {
+      const name = r.photo_name || 'unknown';
+      if (!photoMap[name]) photoMap[name] = { name, index: r.photo_index, views:0, viewEndDurs:[], lbOpens:0, zooms:0, downloads:0 };
+      if (r.event_type === 'view')              photoMap[name].views++;
+      if (r.event_type === 'view_end')          photoMap[name].viewEndDurs.push(r.duration_seconds||0);
+      if (r.event_type === 'lightbox_open')     photoMap[name].lbOpens++;
+      if (r.event_type === 'zoom')              photoMap[name].zooms++;
+      if (r.event_type === 'download_attempt')  photoMap[name].downloads++;
+    });
+
+    const photoList = Object.values(photoMap).sort((a,b) => (a.index||0) - (b.index||0));
+    const photoTbody = document.getElementById('gallery-photo-tbody');
+    if (photoTbody) {
+      photoTbody.innerHTML = photoList.map((p, i) => {
+        const avgDur = p.viewEndDurs.length
+          ? Math.round(p.viewEndDurs.reduce((s,d)=>s+d,0)/p.viewEndDurs.length)
+          : 0;
+        return `<tr>
+          <td class="mono muted">${i+1}</td>
+          <td style="font-weight:600;color:#4f46e5">${p.name}</td>
+          <td class="mono">${p.views}</td>
+          <td class="mono">${fmtDur(avgDur)}</td>
+          <td class="mono">${p.lbOpens}</td>
+          <td class="mono">${p.zooms}</td>
+          <td class="mono">${p.downloads || '—'}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="7" class="empty-cell">No photo events yet.</td></tr>';
+    }
+
+    // ── Photo Views Over Time (last 7 days) ──
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+    const recentViews  = views.filter(r => new Date(r.visited_at) >= sevenDaysAgo);
+    const byDay = {}; const orderedDays = [];
+    recentViews.forEach(r => {
+      const d = new Date(r.visited_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'});
+      if (!byDay[d]) { byDay[d] = 0; orderedDays.push(d); }
+      byDay[d]++;
+    });
+    makeChart('chart-gl-timeline', 'line', orderedDays, orderedDays.map(k => byDay[k]));
+
+    // ── Views per Photo (bar) ──
+    const byPhoto = photoList.map(p => [p.name, p.views]);
+    makeChart('chart-gl-photos', 'bar', byPhoto.map(x=>x[0]), byPhoto.map(x=>x[1]));
+  }
+
   // ── Load ───────────────────────────────────────────────────
-  let allRows=[];
+  let allRows=[], allPhotoRows=[];
   async function loadData() {
     const period=document.getElementById('date-filter').value;
     document.getElementById('visits-tbody').innerHTML=
       '<tr><td colspan="11" class="empty-cell">⏳ Loading…</td></tr>';
     try {
-      allRows=await fetchVisits(period);
+      [allRows, allPhotoRows] = await Promise.all([
+        fetchVisits(period),
+        fetchPhotoEvents(period),
+      ]);
       expandedSessions.clear();
-      renderOverview(allRows);
+      renderOverview(allRows, allPhotoRows);
       renderTable(allRows);
       renderRecipients(allRows);
       renderDevices(allRows);
       renderGeo(allRows);
+      renderGallery(allPhotoRows);
       document.getElementById('last-updated').textContent=
         new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
     } catch(e) {
@@ -608,7 +691,8 @@ function initAdmin(cfg) {
     visitors:'All visitors — click any row to expand',
     recipients:'Track who clicked your shared links',
     devices:'Device & browser breakdown',
-    geo:'Location & ISP data'
+    geo:'Location & ISP data',
+    gallery:'Photo gallery engagement'
   };
   document.querySelectorAll('.nav-item').forEach(item=>{
     item.addEventListener('click',e=>{
@@ -625,6 +709,7 @@ function initAdmin(cfg) {
         if(sec==='geo')        renderGeo(allRows);
         if(sec==='recipients') renderRecipients(allRows);
       }
+      if(sec==='gallery') renderGallery(allPhotoRows);
     });
   });
 

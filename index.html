@@ -5,17 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marriage Biodata - Altaf Ansari</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="gallery.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="script.js"></script>
     <script src="analytics/config.js"></script>
     <script src="analytics/biodata.js"></script>
+    <script src="gallery.js" defer></script>
   </head>
   <body>
+
+    <!-- Right-edge arrow: direct body child so position:fixed works everywhere.
+         Shown by gallery.js only when photos/manifest.json has entries. -->
+    <a class="photos-edge-arrow" id="photos-edge-arrow" href="photos.html" aria-label="View photos">&#8250;</a>
+
     <div class="container">
       <header>
         <div class="header-pattern"></div>
-        <!-- <h1>Marriage Biodata</h1> -->
         <div class="profile-header">
           <h2>Altaf Ansari</h2>
           <p class="subtitle">Senior Software Engineer at <span class="company ibm-logo-wrap">
@@ -26,12 +32,8 @@
               onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=\'ibm-fallback\'>IBM</span>');"
             />
           </span></p>
-          <!-- <p class="subtitle">Working in IT Company</p> -->
           <div class="quick-info">
             <span><i class="fas fa-map-marker-alt"></i> Bengaluru</span>
-            <!-- <a href="https://www.linkedin.com/in/altafjava" target="_blank" rel="noopener noreferrer" class="social-link" title="LinkedIn">
-              <i class="fab fa-linkedin"></i>
-            </a> -->
           </div>
           <div class="contact-info">
             <a href="https://wa.me/918341949651" onclick="openWhatsApp(event)" class="contact-link" title="WhatsApp">
@@ -242,6 +244,9 @@
           </div>
         </section>
       </main>
+
+      <!-- "View Photos" banner injected here by gallery.js -->
+
     </div>
   </body>
 </html>
