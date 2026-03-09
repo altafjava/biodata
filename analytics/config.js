@@ -18,13 +18,4 @@ window.ANALYTICS_CONFIG = {
   // e.g. "altaf-1994-admin" or "ramgarh-secret-99"
   adminSecret:  "altaf-admin-2024",
 
-  // ── Keyboard Shortcut ─────────────────────────────────────
-  // Desktop: which key + Ctrl+Shift to press
-  // e.g. "A" means Ctrl+Shift+A
-  shortcutKey:  "Q",
-
-  // ── Mobile Trigger ────────────────────────────────────────
-  // How many taps in bottom-right corner to open admin
-  mobileTaps:   2,
-
 };

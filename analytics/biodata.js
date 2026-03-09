@@ -15,7 +15,6 @@
     const SUPABASE_KEY = cfg.supabaseKey;
     const TABLE_NAME   = cfg.tableName   || "visits";
     const ADMIN_SECRET = cfg.adminSecret;
-    const SHORTCUT_KEY = cfg.shortcutKey || "A";
     const DEBUG        = cfg.debug       || false;
 
     const log = (...a) => { if (DEBUG) console.log("[Analytics]", ...a); };
@@ -260,19 +259,6 @@
       setInterval(() => { if (visitId) save(); }, 15000);
     }
 
-    // ── Admin shortcut ────────────────────────────────────────
-    function setupAdminShortcut() {
-      const adminUrl = `analytics/admin.html#${ADMIN_SECRET}`;
-      const isMac    = /macintosh|mac os/i.test(navigator.userAgent);
-      document.addEventListener("keydown", function (e) {
-        const mod = isMac ? e.metaKey : e.ctrlKey;
-        if (mod && e.shiftKey && e.key === SHORTCUT_KEY) {
-          e.preventDefault();
-          window.open(adminUrl, "_blank");
-        }
-      });
-    }
-
     // ── Init ──────────────────────────────────────────────────
     async function init() {
       if (!SUPABASE_URL || SUPABASE_URL.includes("YOUR_")) { err("supabaseUrl not set!"); return; }
@@ -301,7 +287,6 @@
       trackScroll();
       trackButtons();
       trackSessionEnd();
-      setupAdminShortcut();
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
