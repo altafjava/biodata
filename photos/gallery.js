@@ -14,7 +14,11 @@
 
   /* ── Zoom / pan state ── */
   var zoom  = 1, tx = 0, ty = 0;
-  var zoomTrackedForCurrent = false;
+  /* maxZoomReached: updated every time zoom changes.
+     Sent with view_end so we capture the DEEPEST zoom of the session.
+     Also used to fire a zoom event the first time zoom > 1.1 (10% threshold). */
+  var maxZoomReached      = 1;
+  var zoomEventFired      = false;   /* fire zoom event once per photo */
 
   /* ── Gesture state machine ──
      mode: 'idle' | 'pinch' | 'pan' | 'swipe'
@@ -160,10 +164,12 @@
 
     /* Reset zoom state cleanly */
     zoom = 1; tx = 0; ty = 0;
+    maxZoomReached = 1;
+    zoomEventFired = false;
+    lastFiredZoom  = 0;
     gestureMode = 'idle';
     mainImg.style.transition = 'none';
     mainImg.style.transform  = 'translate(0,0) scale(1)';
-    zoomTrackedForCurrent = false;
 
     currentIndex = index;
     bgImg.src = 'photos/' + photos[index];
@@ -251,6 +257,9 @@
       ? 'transform 0.32s cubic-bezier(0.22,1,0.36,1)'
       : 'none';
     mainImg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + zoom + ')';
+    /* Show grab cursor on desktop when zoomed */
+    var v = document.getElementById('gl-viewer');
+    if (v) v.style.cursor = zoom > 1 ? 'grab' : '';
   }
 
   function clampPan() {
@@ -277,7 +286,7 @@
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
         );
-        pinchStartZoom = zoom;   /* <-- THIS is the key fix: baseline zoom */
+        pinchStartZoom = zoom;
 
       } else if (tc === 1) {
         var t = e.touches[0];
@@ -288,15 +297,17 @@
           panOrigTx = tx;        panOrigTy = ty;
           return;
         }
-        /* Fresh 1-finger touch */
+        /* Always record tap position & time — needed for double-tap
+           detection regardless of whether we end up in pan or swipe. */
+        swipeStartX = t.clientX;
+        swipeStartY = t.clientY;
+        /* Choose mode based on zoom level */
         if (zoom > 1) {
           gestureMode = 'pan';
           panStartX = t.clientX; panStartY = t.clientY;
           panOrigTx = tx;        panOrigTy = ty;
         } else {
           gestureMode = 'swipe';
-          swipeStartX = t.clientX;
-          swipeStartY = t.clientY;
         }
       }
     }, { passive: true });
@@ -310,7 +321,7 @@
           e.touches[0].clientY - e.touches[1].clientY
         );
         /* Scale relative to the gesture START — no drift */
-        zoom = Math.min(6, Math.max(1, pinchStartZoom * (d / pinchStartDist)));
+        updateZoom(Math.min(6, Math.max(1, pinchStartZoom * (d / pinchStartDist))));
         clampPan();
         applyTransform(false);
 
@@ -328,59 +339,54 @@
       var remaining = e.touches.length;
       var changed   = e.changedTouches[0];
 
+      /* ── Pinch ended ── */
       if (gestureMode === 'pinch') {
         if (remaining === 1) {
-          /* One finger still down — switch to pan so user can reposition */
           gestureMode = 'pan';
           panStartX = e.touches[0].clientX;
           panStartY = e.touches[0].clientY;
           panOrigTx = tx;
           panOrigTy = ty;
         } else if (remaining === 0) {
-          /* Both fingers up — zoom STAYS exactly where it is */
           if (zoom < 1.02) {
-            zoom = 1; tx = 0; ty = 0;
-            applyTransform(true);  /* snap to 1 if nearly at 1 */
+            updateZoom(1); tx = 0; ty = 0; applyTransform(true);
+          } else {
+            updateZoom(zoom);  /* ensure maxZoomReached updated + retry zoom event if missed */
+            applyTransform(false);
           }
           gestureMode = 'idle';
         }
-        return;  /* never fall through to double-tap / swipe */
-      }
-
-      if (gestureMode === 'pan' && remaining === 0) {
-        gestureMode = 'idle';
         return;
       }
 
-      if (gestureMode === 'swipe' && remaining === 0) {
-        var dx = changed.clientX - swipeStartX;
-        var dy = changed.clientY - swipeStartY;
+      /* ── Both pan and swipe: check double-tap FIRST ── */
+      if (remaining === 0 && (gestureMode === 'pan' || gestureMode === 'swipe')) {
+        var dx    = changed.clientX - swipeStartX;
+        var dy    = changed.clientY - swipeStartY;
+        var moved = Math.abs(dx) < 14 && Math.abs(dy) < 14;  /* finger barely moved */
+        var now   = Date.now();
 
-        /* Double-tap detection */
-        var now = Date.now();
-        var dtx = changed.clientX - lastTapX;
-        var dty = changed.clientY - lastTapY;
-        var moved = Math.abs(dx) < 12 && Math.abs(dy) < 12;
-        if (moved && now - lastTapTime < 300) {
-          /* ── Double tap ── */
+        if (moved && now - lastTapTime < 450) {  /* 450ms — comfortable double-tap window */
+          /* ── Double-tap: toggle zoom ── */
+          lastTapTime = 0; gestureMode = 'idle';
           if (zoom > 1.05) {
-            zoom = 1; tx = 0; ty = 0;
+            /* Zoom out */
+            updateZoom(1); tx = 0; ty = 0;
             applyTransform(true);
           } else {
+            /* Zoom in to 2.8× centered on tap point */
             var newZ = 2.8;
             var ntx  = (window.innerWidth  / 2 - changed.clientX) * (newZ - 1);
             var nty  = (window.innerHeight / 2 - changed.clientY) * (newZ - 1);
-            zoom = newZ; tx = ntx; ty = nty;
+            tx = ntx; ty = nty;
+            updateZoom(newZ);
             clampPan();
             applyTransform(true);
-            trackZoom();
           }
-          lastTapTime = 0;
-          gestureMode = 'idle';
           return;
         }
 
-        /* Single-tap: record for double-tap detection */
+        /* Record this tap for double-tap window */
         if (moved) {
           lastTapTime = now;
           lastTapX    = changed.clientX;
@@ -389,11 +395,10 @@
           lastTapTime = 0;
         }
 
-        /* Swipe navigation */
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
+        /* Swipe navigation (only when not zoomed) */
+        if (gestureMode === 'swipe' && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
           goToPhoto(dx < 0 ? currentIndex + 1 : currentIndex - 1);
         }
-
         gestureMode = 'idle';
       }
     }, { passive: true });
@@ -401,18 +406,117 @@
     /* ── Desktop wheel zoom ── */
     viewer.addEventListener('wheel', function (e) {
       e.preventDefault();
-      var factor = e.deltaY > 0 ? 0.92 : 1.08;
-      zoom = Math.min(6, Math.max(1, zoom * factor));
-      if (zoom <= 1.02) { zoom = 1; tx = 0; ty = 0; }
-      clampPan();
+      var delta    = e.deltaY > 0 ? 0.92 : 1.08;
+      var prevZoom = zoom;
+      var newZoom  = Math.min(6, Math.max(1, zoom * delta));
+      if (newZoom <= 1.02) {
+        updateZoom(1); tx = 0; ty = 0;
+      } else {
+        /* Zoom toward cursor position */
+        var rect = viewer.getBoundingClientRect();
+        var cx = e.clientX - rect.left - rect.width  / 2;
+        var cy = e.clientY - rect.top  - rect.height / 2;
+        tx = cx - (cx - tx) * (newZoom / prevZoom);
+        ty = cy - (cy - ty) * (newZoom / prevZoom);
+        updateZoom(newZoom);
+        clampPan();
+      }
       applyTransform(false);
     }, { passive: false });
+
+    /* ── Desktop double-click zoom ── */
+    var lastClickTime = 0;
+    viewer.addEventListener('click', function (e) {
+      var now = Date.now();
+      if (now - lastClickTime < 400) {
+        /* Double-click detected */
+        if (zoom > 1.05) {
+          updateZoom(1); tx = 0; ty = 0;
+          applyTransform(true);
+        } else {
+          var newZ = 2.8;
+          var rect = viewer.getBoundingClientRect();
+          var cx = e.clientX - rect.left - rect.width  / 2;
+          var cy = e.clientY - rect.top  - rect.height / 2;
+          tx = cx - (cx - tx) * (newZ / zoom);
+          ty = cy - (cy - ty) * (newZ / zoom);
+          updateZoom(newZ);
+          clampPan();
+          applyTransform(true);
+        }
+        lastClickTime = 0;
+      } else {
+        lastClickTime = now;
+      }
+    });
+
+    /* ── Desktop mouse drag (pan when zoomed) ── */
+    var mouseDragging = false;
+    var mousePanStartX = 0, mousePanStartY = 0;
+    var mousePanOrigTx = 0, mousePanOrigTy = 0;
+
+    viewer.addEventListener('mousedown', function (e) {
+      if (zoom <= 1 || e.button !== 0) return;
+      mouseDragging = true;
+      mousePanStartX = e.clientX;
+      mousePanStartY = e.clientY;
+      mousePanOrigTx = tx;
+      mousePanOrigTy = ty;
+      viewer.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', function (e) {
+      if (!mouseDragging) return;
+      tx = mousePanOrigTx + (e.clientX - mousePanStartX);
+      ty = mousePanOrigTy + (e.clientY - mousePanStartY);
+      clampPan();
+      applyTransform(false);
+    });
+
+    window.addEventListener('mouseup', function () {
+      if (!mouseDragging) return;
+      mouseDragging = false;
+      viewer.style.cursor = zoom > 1 ? 'grab' : '';
+    });
   }
 
-  function trackZoom() {
-    if (zoomTrackedForCurrent) return;
-    zoomTrackedForCurrent = true;
-    fireEvent('zoom', 0);
+  /* Called whenever zoom changes. Updates maxZoomReached and
+     fires a zoom event the FIRST time zoom exceeds 10% above base.
+     The actual max-zoom value is sent with view_end.
+     zoomEventFired is only set TRUE once the bridge confirms it
+     accepted the event — if bridge isn't ready yet, we retry on
+     every subsequent zoom change until it goes through. */
+  /* lastFiredZoom: the zoom level at which we last sent a zoom event.
+     We re-fire if zoom grows by >25% above lastFiredZoom so that the
+     admin always sees the MAXIMUM level reached in DB, not just first touch. */
+  var lastFiredZoom = 0;
+
+  function updateZoom(newZoom) {
+    zoom = newZoom;
+    if (zoom > maxZoomReached) maxZoomReached = zoom;
+
+    var bridge = window._galleryAnalytics;
+    if (!bridge) return;  /* retry on next call when bridge is ready */
+
+    /* Fire (or re-fire) a zoom event when:
+       - first time zoom exceeds 10% above base, OR
+       - zoom grew by more than 25% above the last fired level */
+    var shouldFire = zoom > 1.1 && (
+      lastFiredZoom === 0 ||
+      zoom > lastFiredZoom * 1.25
+    );
+    if (shouldFire) {
+      lastFiredZoom = zoom;
+      zoomEventFired = true;
+      bridge.trackEvent({
+        photo_name:       photos[currentIndex],
+        photo_index:      currentIndex,
+        event_type:       'zoom',
+        duration_seconds: Math.round(zoom * 100),  /* zoom factor×100 as carrier */
+        zoom_pct:         Math.round(zoom * 100)
+      });
+    }
   }
 
   /* ════════════════════════════════════════
@@ -441,12 +545,14 @@
 
   function fireViewEnd() {
     if (!viewStartTime) return;
-    var dur = Math.round((Date.now() - viewStartTime) / 1000);
+    var dur     = Math.round((Date.now() - viewStartTime) / 1000);
+    var zoomPct = maxZoomReached > 1.02 ? Math.round(maxZoomReached * 100) : 0;  /* e.g. 150 = 1.5× zoom, 280 = 2.8× zoom */
     window._galleryAnalytics && window._galleryAnalytics.trackEvent({
       photo_name:       photos[currentIndex],
       photo_index:      currentIndex,
       event_type:       'view_end',
-      duration_seconds: dur
+      duration_seconds: dur,
+      zoom_pct:         zoomPct   /* 0 = no zoom, 100 = 2× zoom, 280 = 2.8× */
     });
     viewStartTime = 0;
   }

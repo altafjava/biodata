@@ -4,21 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Analytics · Altaf Ansari</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="admin.css" />
-    <style>
-      .tag-recip {
-        background: #ede9fe;
-        color: #6d28d9;
-        max-width: 140px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-    </style>
+
   </head>
   <body>
     <div class="overlay" id="overlay"></div>
@@ -51,55 +45,51 @@
           <div class="live-indicator"><span class="live-dot"></span>Live</div>
         </div>
         <nav class="nav">
-          <div class="nav-label">ANALYTICS</div>
-          <a class="nav-item active" data-section="overview" href="#">
+          <div class="nav-label">Main</div>
+          <a class="nav-item active" data-section="overview" data-label="Overview" href="#">
             <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                d="M2 10a8 8 0 1116 0A8 8 0 012 10zm8-3a1 1 0 00-.867.5L7.535 10H5a1 1 0 000 2h3a1 1 0 00.867-.5l1.598-2.797L12.5 13a1 1 0 001.774-.077l1.5-3.5A1 1 0 1014 9.5l-.724 1.69-2.35-4.19A1 1 0 0010 7z"
-              />
+              <path d="M2 10a8 8 0 1116 0A8 8 0 012 10zm8-3a1 1 0 00-.867.5L7.535 10H5a1 1 0 000 2h3a1 1 0 00.867-.5l1.598-2.797L12.5 13a1 1 0 001.774-.077l1.5-3.5A1 1 0 1014 9.5l-.724 1.69-2.35-4.19A1 1 0 0010 7z"/>
             </svg>
-            Overview
+            <span>Overview</span>
           </a>
-          <a class="nav-item" data-section="visitors" href="#">
+          <a class="nav-item" data-section="visitors" data-label="Visitors" href="#">
             <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
-              />
+              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
             </svg>
-            Visitors
+            <span>Visitors</span>
           </a>
-          <a class="nav-item" data-section="recipients" href="#">
+          <a class="nav-item" data-section="recipients" data-label="Recipients" href="#">
             <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fill-rule="evenodd"
-                d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z"
-                clip-rule="evenodd"
-              />
+              <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
             </svg>
-            Recipients
+            <span>Recipients</span>
           </a>
-          <a class="nav-item" data-section="devices" href="#">
-            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M13 7H7v6h6V7z" />
-              <path
-                fill-rule="evenodd"
-                d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z"
-                clip-rule="evenodd"
-              />
-            </svg>
-            Devices
-          </a>
-          <a class="nav-item" data-section="geo" href="#">
-            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
-            </svg>
-            Geography
-          </a>
-          <a class="nav-item" data-section="gallery" href="#">
+          <a class="nav-item" data-section="gallery" data-label="Gallery" href="#">
             <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
             </svg>
-            Gallery
+            <span>Gallery</span>
+          </a>
+          <a class="nav-item" data-section="photo-activity" data-label="Photo Activity" href="#">
+            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+            </svg>
+            <span>Photo Activity</span>
+          </a>
+          <div class="nav-label" style="margin-top:8px">Insights</div>
+          <a class="nav-item" data-section="devices" data-label="Devices" href="#">
+            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13 7H7v6h6V7z"/>
+              <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/>
+            </svg>
+            <span>Devices</span>
+          </a>
+          <a class="nav-item" data-section="geo" data-label="Geography" href="#">
+            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+            </svg>
+            <span>Geography</span>
           </a>
         </nav>
         <div class="sidebar-footer">
@@ -120,13 +110,10 @@
       <main class="main">
         <div class="topbar">
           <div class="topbar-left">
-            <button class="menu-btn" id="menu-btn">
-              <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                <path
-                  fill-rule="evenodd"
-                  d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                  clip-rule="evenodd"
-                />
+            <!-- Single button: desktop = collapse/expand, mobile = hamburger drawer -->
+            <button class="menu-btn" id="menu-btn" title="Toggle sidebar">
+              <svg id="collapse-icon" viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
               </svg>
             </button>
             <div>
@@ -340,6 +327,37 @@
               </table>
             </div>
           </div>
+
+        </section>
+
+        <!-- ── PHOTO ACTIVITY ────────────────────────────────── -->
+        <section id="section-photo-activity" class="section">
+          <div class="table-card">
+            <div class="table-hdr">
+              <div class="table-hdr-left">
+                <h3>Photo Activity by Recipient</h3>
+                <span class="count-badge" style="background:#ecfdf5;color:#059669">click row to expand</span>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Recipient</th>
+                    <th>Photos Viewed</th>
+                    <th>Total Views</th>
+                    <th>Zooms</th>
+                    <th>Total Time</th>
+                    <th>Last Active</th>
+                  </tr>
+                </thead>
+                <tbody id="gl-activity-tbody">
+                  <tr><td colspan="7" class="empty-cell">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         <!-- ── VISITORS ───────────────────────────────────────── -->
@@ -397,12 +415,14 @@
                     <th>First Opened</th>
                     <th>Last Seen</th>
                     <th>Scroll · Avg Time</th>
+                    <th>Photo Views · Zooms</th>
+                    <th>Avg Photo Time</th>
                     <th>Contacted Via</th>
                   </tr>
                 </thead>
                 <tbody id="recipients-tbody">
                   <tr>
-                    <td colspan="7" class="empty-cell">Loading…</td>
+                    <td colspan="9" class="empty-cell">Loading…</td>
                   </tr>
                 </tbody>
               </table>
@@ -481,16 +501,42 @@
       const menuBtn = document.getElementById("menu-btn");
       const sidebar = document.getElementById("sidebar");
       const overlay = document.getElementById("overlay");
-      const close = () => {
+      const app     = document.getElementById("app");
+      const collapseIcon = document.getElementById("collapse-icon");
+      const COLLAPSE_KEY = "_adm_sidebar_collapsed";
+      const isMobile = () => window.innerWidth <= 768;
+
+      function setCollapseIcon(collapsed) {
+        collapseIcon.innerHTML = collapsed
+          ? '<path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>'
+          : '<path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>';
+      }
+
+      // Restore desktop collapse preference on load
+      if (!isMobile() && localStorage.getItem(COLLAPSE_KEY) === "1") {
+        app.classList.add("sidebar-collapsed");
+        setCollapseIcon(true);
+      }
+
+      menuBtn.addEventListener("click", () => {
+        if (isMobile()) {
+          // Mobile: open/close the drawer overlay
+          sidebar.classList.toggle("open");
+          overlay.classList.toggle("show");
+        } else {
+          // Desktop: collapse/expand the sidebar rail
+          const isCollapsed = app.classList.toggle("sidebar-collapsed");
+          localStorage.setItem(COLLAPSE_KEY, isCollapsed ? "1" : "0");
+          setCollapseIcon(isCollapsed);
+        }
+      });
+
+      const closeMobile = () => {
         sidebar.classList.remove("open");
         overlay.classList.remove("show");
       };
-      menuBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("open");
-        overlay.classList.toggle("show");
-      });
-      overlay.addEventListener("click", close);
-      document.querySelectorAll(".nav-item").forEach((i) => i.addEventListener("click", close));
+      overlay.addEventListener("click", closeMobile);
+      document.querySelectorAll(".nav-item").forEach((i) => i.addEventListener("click", closeMobile));
     </script>
   </body>
 </html>
