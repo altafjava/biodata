@@ -249,23 +249,26 @@
       
       <a id="photo-banner" class="photo-entry-banner" href="photos.html">
         <span class="peb-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="7" width="18" height="13" rx="2"/>
-            <path d="M16 3l-4 4-4-4"/>
-            <circle cx="12" cy="13" r="3"/>
-          </svg>
+          <i class="fas fa-images"></i>
         </span>
         <div class="peb-content">
           <span class="peb-text">View Photos</span>
           <span class="peb-count" id="peb-count-text">Loading...</span>
         </div>
-        <span class="peb-arrow">›</span>
+        <span class="peb-arrow">
+          <i class="fas fa-chevron-right"></i>
+        </span>
       </a>
     </div>
 
+    <!-- Pulse ring behind FAB (separate so it can overflow without clipping) -->
+    <div class="gallery-fab-ripple" aria-hidden="true"></div>
+
     <button class="gallery-fab" id="gallery-fab"
             onclick="window.location.href='photos.html'" aria-label="View photos">
-      <i class="fas fa-camera"></i>
+      <div class="fab-icon">
+        <i class="fas fa-images"></i>
+      </div>
       <span>Photos</span>
     </button>
   <script src="photos/gallery.js" defer></script>

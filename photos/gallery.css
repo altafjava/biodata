@@ -6,196 +6,308 @@
    INDEX PAGE — Banner + FAB
 ═══════════════════════════════════════════════════════════ */
 
-/* ── "View Photos" Banner — biodata gradient theme ── */
+/* ══════════════════════════════════════════════════════════
+   VIEW PHOTOS BANNER — Premium, no emoji
+   ══════════════════════════════════════════════════════════ */
 .photo-entry-banner {
   display: flex;
   align-items: center;
-  margin: 20px 12px 20px;
+  margin: 16px 12px 20px;
   padding: 0;
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
   text-decoration: none;
-  background: linear-gradient(135deg, #2962ff 0%, #8b1fc8 50%, #d90e5f 100%);
+  background: linear-gradient(120deg, #3730a3 0%, #6d28d9 50%, #be185d 100%);
   box-shadow:
-    0 2px 0 rgba(255,255,255,0.18) inset,
-    0 8px 30px rgba(41,98,255,0.38),
-    0 4px 16px rgba(217,14,95,0.22);
-  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 4px 18px rgba(109,40,217,0.28),
+    0 2px 8px  rgba(190,24,93,0.16);
   position: relative;
+  transition: transform 0.15s ease;
 }
-.photo-entry-banner::after {
+/* Top glass sheen */
+.photo-entry-banner::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.1) 0%,
-    transparent 55%,
-    rgba(0,0,0,0.08) 100%);
+  background: linear-gradient(165deg,
+    rgba(255,255,255,0.11) 0%,
+    rgba(255,255,255,0.02) 45%,
+    transparent 65%);
   pointer-events: none;
   z-index: 1;
 }
-.photo-entry-banner:active  { transform: scale(0.972); }
-.photo-entry-banner:hover {
-  box-shadow:
-    0 2px 0 rgba(255,255,255,0.22) inset,
-    0 12px 40px rgba(41,98,255,0.5),
-    0 6px 20px rgba(217,14,95,0.32);
+/* Shimmer sweep every 5s */
+.photo-entry-banner::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -80%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255,255,255,0.10) 50%,
+    transparent 80%
+  );
+  animation: banner-shimmer 5s ease-in-out infinite 2s;
+  pointer-events: none;
+  z-index: 2;
 }
+@keyframes banner-shimmer {
+  0%   { left: -80%; opacity: 0; }
+  6%   { opacity: 1; }
+  40%  { left: 130%; opacity: 0; }
+  100% { left: 130%; opacity: 0; }
+}
+.photo-entry-banner:active { transform: scale(0.972); }
 
+/* ── Left: icon circle, not a full dark panel ── */
 .peb-icon {
-  position: relative; z-index: 2;
-  width: 70px; height: 70px;
+  position: relative; z-index: 3;
+  width: 58px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px;
-  background: rgba(0,0,0,0.14);
-  border-right: 1px solid rgba(255,255,255,0.14);
+  align-self: stretch;
+  background: rgba(0,0,0,0.15);
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
-.peb-icon svg  { display: none; }
-.peb-icon::after { content: '📷'; }
+/* Hide any old emoji / svg fallback */
+.peb-icon::after { display: none !important; }
+.peb-icon svg    { display: none !important; }
+/* Use Font Awesome fa-images via content on a child i */
+.peb-icon i {
+  font-size: 1.3rem;
+  color: rgba(255,255,255,0.92);
+  filter: drop-shadow(0 1px 6px rgba(0,0,0,0.3));
+}
 
+/* ── Centre: text ── */
 .peb-content {
-  position: relative; z-index: 2;
+  position: relative; z-index: 3;
   flex: 1;
-  padding: 14px 10px 14px 18px;
-  display: flex; flex-direction: column; gap: 3px;
+  padding: 12px 8px 12px 14px;
+  display: flex; flex-direction: column; gap: 1px;
 }
 .peb-text {
   font-family: 'Poppins', sans-serif;
-  font-size: 1rem; font-weight: 600;
-  color: #fff; letter-spacing: 0.01em; line-height: 1.2;
+  font-size: 0.92rem; font-weight: 700;
+  color: #fff; letter-spacing: 0.01em; line-height: 1.25;
 }
 .peb-count {
   font-family: 'Poppins', sans-serif;
-  font-size: 0.78rem; font-weight: 400;
-  color: rgba(255,255,255,0.78); letter-spacing: 0.02em;
+  font-size: 0.68rem; font-weight: 400;
+  color: rgba(255,255,255,0.60);
+  letter-spacing: 0.05em;
 }
 
+/* ── Right: chevron ── */
 .peb-arrow {
-  position: relative; z-index: 2;
-  width: 50px; height: 70px;
+  position: relative; z-index: 3;
+  width: 38px;
   flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.6rem; font-weight: 300;
-  color: rgba(255,255,255,0.9);
-  background: rgba(0,0,0,0.12);
-  border-left: 1px solid rgba(255,255,255,0.14);
-  transition: background 0.2s;
+  align-self: stretch;
+  background: rgba(0,0,0,0.10);
+  border-left: 1px solid rgba(255,255,255,0.08);
 }
-.photo-entry-banner:hover .peb-arrow { background: rgba(0,0,0,0.2); }
+/* Hide old text arrow, use FA icon via JS / HTML */
+.peb-arrow i {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.65);
+}
 
 
-/* ── Premium FAB — sleek vertical pill, right edge ── */
+/* ══════════════════════════════════════════════════════════
+   GALLERY FAB — Compact pull-tab, right edge
+   Small, elegant, curious. No hover effects (mobile only).
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Single tight pulse ring (separate element, no interference) ── */
+.gallery-fab-ripple {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 997;
+  /* Match FAB size exactly */
+  width: 26px;
+  height: 48px;
+  border-radius: 11px 0 0 11px;
+  pointer-events: none;
+  /* The ring expands outward from this box */
+  overflow: visible;
+}
+.gallery-fab-ripple::before {
+  content: '';
+  position: absolute;
+  /* Expand equally on all sides except right edge */
+  top: -6px; bottom: -6px; left: -10px; right: 0;
+  border-radius: 17px 0 0 17px;
+  background: linear-gradient(135deg, #6d28d9, #be185d);
+  opacity: 0;
+  animation: fab-pulse 2.8s ease-out infinite;
+}
+/* No ::after — one ring is enough */
+@keyframes fab-pulse {
+  0%   { transform: scale(0.9);  opacity: 0.45; }
+  100% { transform: scale(1.35); opacity: 0;    }
+}
+
+/* ── The FAB ── */
 .gallery-fab {
   position: fixed;
   right: 0;
   top: 50%;
   transform: translateY(-50%);
   z-index: 999;
-  /* Slim pill shape */
-  width: 42px;
-  height: 80px;
-  border-radius: 22px 0 0 22px;
-  background: linear-gradient(170deg, #2962ff 0%, #c0176a 100%);
+
+  /* Small compact pull-tab */
+  width: 26px;
+  height: 48px;
+  border-radius: 11px 0 0 11px;
+
+  background: linear-gradient(160deg, #3730a3 0%, #6d28d9 50%, #be185d 100%);
   border: none;
   cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   color: #fff;
   padding: 0;
   outline: none;
   -webkit-tap-highlight-color: transparent;
-  overflow: visible;
-  /* Inset top highlight + colored glow */
+  overflow: hidden;
+
+  /* Glass inset highlight + soft ambient glow */
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.28),
-    inset -1px 0 0 rgba(255,255,255,0.08),
-    -3px 0 18px rgba(41,98,255,0.45),
-    -1px 0 32px rgba(192,23,106,0.3);
-  animation: fab-slide 3.5s ease-in-out infinite;
+    inset 1px 1px 0 rgba(255,255,255,0.25),
+    -2px 0 10px rgba(109,40,217,0.45),
+    -1px 0 20px rgba(190,24,93,0.25);
+
+  /* Gentle glow breathe — the only animation on the button itself */
+  animation: fab-glow 3s ease-in-out infinite;
 }
 
-/* Subtle shimmer ring that pulses out from the left edge */
+@keyframes fab-glow {
+  0%, 100% {
+    box-shadow:
+      inset 1px 1px 0 rgba(255,255,255,0.25),
+      -2px 0 10px rgba(109,40,217,0.45),
+      -1px 0 18px rgba(190,24,93,0.22);
+  }
+  50% {
+    box-shadow:
+      inset 1px 1px 0 rgba(255,255,255,0.25),
+      -3px 0 16px rgba(109,40,217,0.70),
+      -2px 0 28px rgba(190,24,93,0.40);
+  }
+}
+
+/* Shimmer sweep every 5s */
 .gallery-fab::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(170deg, #2962ff, #c0176a);
-  animation: fab-ring 2.8s ease-out infinite;
-  z-index: -1;
+  top: 0; left: -100%;
+  width: 70%;
+  height: 100%;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255,255,255,0.20) 50%,
+    transparent 80%
+  );
+  animation: fab-shimmer 5s ease-in-out infinite 1s;
+  pointer-events: none;
 }
+@keyframes fab-shimmer {
+  0%   { left: -100%; opacity: 0; }
+  5%   { opacity: 1; }
+  35%  { left: 150%; opacity: 0; }
+  100% { left: 150%; opacity: 0; }
+}
+
+/* Subtle centre notch for depth */
 .gallery-fab::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(170deg, #2962ff, #c0176a);
-  animation: fab-ring 2.8s ease-out infinite 1.4s;
-  z-index: -1;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 1.5px;
+  height: 22px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255,255,255,0.30) 25%,
+    rgba(255,255,255,0.30) 75%,
+    transparent
+  );
+  pointer-events: none;
 }
 
-@keyframes fab-slide {
-  0%, 100% { transform: translateY(-50%) translateX(0px); }
-  50%       { transform: translateY(-50%) translateX(-4px); }
+/* ── Icon stack: sparkle + images icon ── */
+.gallery-fab .fab-icon {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
-@keyframes fab-ring {
-  0%   { transform: scale(1);   opacity: 0.55; }
-  100% { transform: scale(1.5); opacity: 0; }
+.gallery-fab .fab-icon::before {
+  content: '✦';
+  font-size: 5.5px;
+  line-height: 1;
+  opacity: 0.70;
+  animation: sparkle 2.8s ease-in-out infinite;
+}
+@keyframes sparkle {
+  0%, 100% { opacity: 0.65; transform: scale(1);    }
+  50%       { opacity: 1;    transform: scale(1.4);  }
+}
+.gallery-fab .fab-icon i {
+  font-size: 0.78rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.35));
 }
 
-.gallery-fab:hover {
-  animation-play-state: paused;
-  transform: translateY(-50%) translateX(-6px) scale(1.04);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.35),
-    -5px 0 28px rgba(41,98,255,0.65),
-    -2px 0 48px rgba(192,23,106,0.5);
-  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.28s;
-}
-.gallery-fab:hover::before,
-.gallery-fab:hover::after { animation-play-state: paused; }
+/* Press feedback */
 .gallery-fab:active {
-  transform: translateY(-50%) translateX(-3px) scale(0.95);
-  transition: transform 0.1s ease;
+  transform: translateY(-50%) scale(0.92);
+  transition: transform 0.08s ease;
 }
 
-/* Icon only — no text label, cleaner */
-.gallery-fab i {
-  font-size: 1.1rem;
-  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.35));
-}
-/* Hide the "PHOTOS" label — icon alone is cleaner on a slim pill */
 .gallery-fab span { display: none; }
 
-/* Tooltip */
+/* ── Tooltip (appears once, then gone) ── */
 .gallery-fab-tooltip {
   position: fixed;
-  right: 52px;
+  right: 36px;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(10,10,18,0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: #fff;
+  background: rgba(9,7,20,0.80);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: rgba(255,255,255,0.92);
   font-family: 'Poppins', sans-serif;
-  font-size: 0.72rem; font-weight: 500;
-  padding: 7px 14px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 5px 10px;
   border-radius: 20px;
   white-space: nowrap;
   pointer-events: none;
   z-index: 998;
-  border: 1px solid rgba(255,255,255,0.12);
-  animation: fab-tip 3.5s ease forwards;
+  border: 1px solid rgba(109,40,217,0.30);
+  animation: fab-tip 4s ease forwards;
 }
 @keyframes fab-tip {
-  0%   { opacity:0; transform:translateY(-50%) translateX(8px); }
-  18%  { opacity:1; transform:translateY(-50%) translateX(0); }
-  72%  { opacity:1; }
-  100% { opacity:0; }
+  0%   { opacity: 0; transform: translateY(-50%) translateX(5px);  }
+  12%  { opacity: 1; transform: translateY(-50%) translateX(0);    }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 
