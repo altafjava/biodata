@@ -513,6 +513,19 @@ tbody td{padding:11px 14px;max-width:160px;overflow:hidden;text-overflow:ellipsi
   background:var(--green-l); color:var(--green);
   padding:2px 8px; border-radius:5px; font-size:10.5px;
 }
+/* Zoom event rows — slightly different bg to distinguish from view rows */
+.gl-zoom-row{
+  background:#f0fdf4;
+  border-color:#bbf7d0;
+}
+.gl-view-type-view{
+  background:var(--indigo-l);color:var(--indigo);
+  font-size:11px;
+}
+.gl-view-type-zoom{
+  background:var(--green-l);color:var(--green);
+  font-size:11px;
+}
 
 @media(max-width:768px){
   .detail-grid{grid-template-columns:repeat(2,1fr)}

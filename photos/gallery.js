@@ -17,8 +17,8 @@
   /* maxZoomReached: updated every time zoom changes.
      Sent with view_end so we capture the DEEPEST zoom of the session.
      Also used to fire a zoom event the first time zoom > 1.1 (10% threshold). */
-  var maxZoomReached      = 1;
-  var zoomEventFired      = false;   /* fire zoom event once per photo */
+  var maxZoomReached  = 1;   /* max zoom reached this photo — sent with view_end */
+  var gestureMaxZoom  = 1;   /* max zoom during current pinch/wheel gesture */
 
   /* ── Gesture state machine ──
      mode: 'idle' | 'pinch' | 'pan' | 'swipe'
@@ -26,11 +26,14 @@
   var gestureMode    = 'idle';
   var pinchStartDist = 0;
   var pinchStartZoom = 1;
+  var pinchPanning   = false;  /* true when pan follows a pinch — fire zoom on last finger up */
   var panStartX      = 0, panStartY = 0;
   var panOrigTx      = 0, panOrigTy = 0;
   var swipeStartX    = 0, swipeStartY = 0;
-  var lastTapTime    = 0;
-  var lastTapX       = 0, lastTapY = 0;
+  var lastTapTime      = 0;
+  var lastTapX         = 0, lastTapY = 0;
+  var pendingDoubleTap = false;   /* set in touchstart when 2nd tap is fast enough */
+  var doubleTapX       = 0, doubleTapY = 0;
 
   var mainImg = null, bgImg = null;
 
@@ -164,10 +167,14 @@
 
     /* Reset zoom state cleanly */
     zoom = 1; tx = 0; ty = 0;
-    maxZoomReached = 1;
-    zoomEventFired = false;
-    lastFiredZoom  = 0;
-    gestureMode = 'idle';
+    maxZoomReached  = 1;
+    gestureMaxZoom  = 1;
+    pendingDoubleTap = false;
+    lastTapTime      = 0;
+    lastTapX         = 0;
+    lastTapY         = 0;
+    pinchPanning     = false;
+    gestureMode      = 'idle';
     mainImg.style.transition = 'none';
     mainImg.style.transform  = 'translate(0,0) scale(1)';
 
@@ -282,6 +289,7 @@
       if (tc === 2) {
         /* Start pinch — capture baseline distance AND current zoom */
         gestureMode    = 'pinch';
+        gestureMaxZoom = zoom;   /* reset gesture tracking */
         pinchStartDist = Math.hypot(
           e.touches[0].clientX - e.touches[1].clientX,
           e.touches[0].clientY - e.touches[1].clientY
@@ -291,17 +299,56 @@
       } else if (tc === 1) {
         var t = e.touches[0];
         if (gestureMode === 'pinch') {
-          /* Second finger lifting while first still down: stay in pan mode */
+          /* One finger still down after pinch → pan mode */
           gestureMode = 'pan';
           panStartX = t.clientX; panStartY = t.clientY;
           panOrigTx = tx;        panOrigTy = ty;
           return;
         }
-        /* Always record tap position & time — needed for double-tap
-           detection regardless of whether we end up in pan or swipe. */
+
+        var tsNow = Date.now();
+        var dtx   = t.clientX - lastTapX;
+        var dty   = t.clientY - lastTapY;
+        var samePosish = Math.abs(dtx) < 40 && Math.abs(dty) < 40;
+
+        if (lastTapTime > 0 && tsNow - lastTapTime < 450 && samePosish) {
+          /* ── DOUBLE-TAP DETECTED — act immediately on touchstart ──
+             Acting here (not touchend) is the only reliable approach across
+             browsers. By the time touchend fires, some browsers (Opera,
+             Samsung Internet) have already processed the double-tap at
+             the OS level and may have moved/scaled the viewport. */
+          e.preventDefault();  /* block browser's own double-tap behavior */
+          lastTapTime      = 0;
+          pendingDoubleTap = false;
+          gestureMode      = 'doubletap'; /* sentinel: touchend will ignore this gesture */
+
+          if (zoom > 1.05) {
+            /* Second double-tap: zoom back out */
+            updateZoom(1); tx = 0; ty = 0;
+            applyTransform(true);
+          } else {
+            /* First double-tap: zoom to 2.8× centered on tap point */
+            var newZ = 2.8;
+            var ntx  = (window.innerWidth  / 2 - t.clientX) * (newZ - 1);
+            var nty  = (window.innerHeight / 2 - t.clientY) * (newZ - 1);
+            tx = ntx; ty = nty;
+            updateZoom(newZ);
+            clampPan();
+            applyTransform(true);
+            fireZoomEvent(newZ);  /* 1 event per double-tap gesture */
+          }
+          return;
+        }
+
+        /* First tap — record position and time for double-tap window */
+        lastTapTime = tsNow;
+        lastTapX    = t.clientX;
+        lastTapY    = t.clientY;
         swipeStartX = t.clientX;
         swipeStartY = t.clientY;
-        /* Choose mode based on zoom level */
+        pendingDoubleTap = false;
+
+        /* Choose gesture mode based on zoom level */
         if (zoom > 1) {
           gestureMode = 'pan';
           panStartX = t.clientX; panStartY = t.clientY;
@@ -310,7 +357,7 @@
           gestureMode = 'swipe';
         }
       }
-    }, { passive: true });
+    }, { passive: false });
 
     /* ── touchmove ── */
     viewer.addEventListener('touchmove', function (e) {
@@ -342,68 +389,55 @@
       /* ── Pinch ended ── */
       if (gestureMode === 'pinch') {
         if (remaining === 1) {
-          gestureMode = 'pan';
+          /* One finger still down — switch to pan so user can reposition.
+             Mark that this pan originated from a pinch so we know to fire
+             the zoom event when the LAST finger eventually lifts. */
+          gestureMode  = 'pan';
+          pinchPanning = true;   /* flag: this pan follows a pinch */
           panStartX = e.touches[0].clientX;
           panStartY = e.touches[0].clientY;
           panOrigTx = tx;
           panOrigTy = ty;
         } else if (remaining === 0) {
-          if (zoom < 1.02) {
-            updateZoom(1); tx = 0; ty = 0; applyTransform(true);
-          } else {
-            updateZoom(zoom);  /* ensure maxZoomReached updated + retry zoom event if missed */
-            applyTransform(false);
-          }
-          gestureMode = 'idle';
+          /* Both fingers lifted together */
+          if (zoom < 1.02) { updateZoom(1); tx = 0; ty = 0; applyTransform(true); }
+          fireZoomEvent(gestureMaxZoom);
+          gestureMaxZoom = 1;
+          pinchPanning   = false;
+          gestureMode    = 'idle';
         }
         return;
       }
 
-      /* ── Both pan and swipe: check double-tap FIRST ── */
+      /* ── Pan / swipe ended ── */
       if (remaining === 0 && (gestureMode === 'pan' || gestureMode === 'swipe')) {
-        var dx    = changed.clientX - swipeStartX;
-        var dy    = changed.clientY - swipeStartY;
-        var moved = Math.abs(dx) < 14 && Math.abs(dy) < 14;  /* finger barely moved */
-        var now   = Date.now();
-
-        if (moved && now - lastTapTime < 450) {  /* 450ms — comfortable double-tap window */
-          /* ── Double-tap: toggle zoom ── */
-          lastTapTime = 0; gestureMode = 'idle';
-          if (zoom > 1.05) {
-            /* Zoom out */
-            updateZoom(1); tx = 0; ty = 0;
-            applyTransform(true);
-          } else {
-            /* Zoom in to 2.8× centered on tap point */
-            var newZ = 2.8;
-            var ntx  = (window.innerWidth  / 2 - changed.clientX) * (newZ - 1);
-            var nty  = (window.innerHeight / 2 - changed.clientY) * (newZ - 1);
-            tx = ntx; ty = nty;
-            updateZoom(newZ);
-            clampPan();
-            applyTransform(true);
-          }
-          return;
+        if (pinchPanning) {
+          /* Last finger lifted after a pinch→pan transition.
+             Fire the zoom event NOW — this is the true end of the pinch gesture. */
+          fireZoomEvent(gestureMaxZoom);
+          gestureMaxZoom = 1;
+          pinchPanning   = false;
         }
 
-        /* Record this tap for double-tap window */
-        if (moved) {
-          lastTapTime = now;
-          lastTapX    = changed.clientX;
-          lastTapY    = changed.clientY;
-        } else {
-          lastTapTime = 0;
-        }
+        var dx = changed.clientX - swipeStartX;
+        var dy = changed.clientY - swipeStartY;
 
-        /* Swipe navigation (only when not zoomed) */
+        /* Swipe navigation only when not zoomed and not coming from a pinch */
         if (gestureMode === 'swipe' && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
           goToPhoto(dx < 0 ? currentIndex + 1 : currentIndex - 1);
         }
         gestureMode = 'idle';
       }
+
+      /* doubletap sentinel: reset to idle, nothing else to do */
+      if (remaining === 0 && gestureMode === 'doubletap') {
+        gestureMode = 'idle';
+      }
     }, { passive: true });
 
     /* ── Desktop wheel zoom ── */
+    var wheelTimer = null;
+    var wheelMaxZoom = 1;
     viewer.addEventListener('wheel', function (e) {
       e.preventDefault();
       var delta    = e.deltaY > 0 ? 0.92 : 1.08;
@@ -412,7 +446,6 @@
       if (newZoom <= 1.02) {
         updateZoom(1); tx = 0; ty = 0;
       } else {
-        /* Zoom toward cursor position */
         var rect = viewer.getBoundingClientRect();
         var cx = e.clientX - rect.left - rect.width  / 2;
         var cy = e.clientY - rect.top  - rect.height / 2;
@@ -422,6 +455,14 @@
         clampPan();
       }
       applyTransform(false);
+      /* Track max zoom this wheel session and fire ONE event when wheel stops */
+      if (zoom > wheelMaxZoom) wheelMaxZoom = zoom;
+      if (wheelTimer) clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(function () {
+        fireZoomEvent(wheelMaxZoom);
+        wheelMaxZoom = 1;
+        wheelTimer   = null;
+      }, 600);
     }, { passive: false });
 
     /* ── Desktop double-click zoom ── */
@@ -443,6 +484,7 @@
           updateZoom(newZ);
           clampPan();
           applyTransform(true);
+          fireZoomEvent(newZ);
         }
         lastClickTime = 0;
       } else {
@@ -481,42 +523,26 @@
     });
   }
 
-  /* Called whenever zoom changes. Updates maxZoomReached and
-     fires a zoom event the FIRST time zoom exceeds 10% above base.
-     The actual max-zoom value is sent with view_end.
-     zoomEventFired is only set TRUE once the bridge confirms it
-     accepted the event — if bridge isn't ready yet, we retry on
-     every subsequent zoom change until it goes through. */
-  /* lastFiredZoom: the zoom level at which we last sent a zoom event.
-     We re-fire if zoom grows by >25% above lastFiredZoom so that the
-     admin always sees the MAXIMUM level reached in DB, not just first touch. */
-  var lastFiredZoom = 0;
-
+  /* updateZoom: only tracks state. Actual event firing is per-gesture. */
   function updateZoom(newZoom) {
     zoom = newZoom;
-    if (zoom > maxZoomReached) maxZoomReached = zoom;
+    if (zoom > maxZoomReached)  maxZoomReached  = zoom;
+    if (zoom > gestureMaxZoom)  gestureMaxZoom  = zoom;
+  }
 
+  /* Fire a single zoom analytic event for the completed gesture */
+  function fireZoomEvent(zoomLevel) {
+    if (zoomLevel < 1.05) return;  /* ignore near-1 resets */
     var bridge = window._galleryAnalytics;
-    if (!bridge) return;  /* retry on next call when bridge is ready */
-
-    /* Fire (or re-fire) a zoom event when:
-       - first time zoom exceeds 10% above base, OR
-       - zoom grew by more than 25% above the last fired level */
-    var shouldFire = zoom > 1.1 && (
-      lastFiredZoom === 0 ||
-      zoom > lastFiredZoom * 1.25
-    );
-    if (shouldFire) {
-      lastFiredZoom = zoom;
-      zoomEventFired = true;
-      bridge.trackEvent({
-        photo_name:       photos[currentIndex],
-        photo_index:      currentIndex,
-        event_type:       'zoom',
-        duration_seconds: Math.round(zoom * 100),  /* zoom factor×100 as carrier */
-        zoom_pct:         Math.round(zoom * 100)
-      });
-    }
+    if (!bridge) return;
+    var pct = Math.round(zoomLevel * 100);
+    bridge.trackEvent({
+      photo_name:       photos[currentIndex],
+      photo_index:      currentIndex,
+      event_type:       'zoom',
+      duration_seconds: pct,
+      zoom_pct:         pct
+    });
   }
 
   /* ════════════════════════════════════════

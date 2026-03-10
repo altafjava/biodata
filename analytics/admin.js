@@ -670,9 +670,16 @@ function initAdmin(cfg) {
     const sortedPhotos = Object.entries(photoStats).sort((a, b) => b[1].views - a[1].views);
 
     makeChart('gl-chart-photos', 'bar',
-      sortedPhotos.map(p => p[0].replace('photo', '').replace(/\..*/, '')),
+      sortedPhotos.map(p => p[0]),   /* full photo name — same as Photo Performance table */
       sortedPhotos.map(p => p[1].views),
-      { indexAxis: 'y' }
+      {
+        indexAxis: 'y',
+        scales: {
+          x: { grid: { color: '#f0f2f8' }, beginAtZero: true, ticks: { font: { size: 10 }, stepSize: 1 }, position: 'bottom' },
+          y: { grid: { display: false }, ticks: { font: { size: 11 } }, position: 'left' }
+        },
+        plugins: { legend: { display: false } }
+      }
     );
 
     const tbody = document.getElementById('gl-table').querySelector('tbody');
@@ -716,8 +723,6 @@ function initAdmin(cfg) {
           </tr>`).join('');
       }
     }
-    // Render the detailed drill-down table
-    renderPhotoActivity(events);
   }
 
   // ── Photo Activity by Recipient (drill-down table) ──────
@@ -746,7 +751,7 @@ function initAdmin(cfg) {
       const t = e.recipient_tag;
       const p = e.photo_name || 'unknown';
       if (!byTag[t]) byTag[t] = { tag: t, photos: {}, totalViews: 0, totalZooms: 0, totalDur: 0, lastSeen: e.visited_at };
-      if (!byTag[t].photos[p]) byTag[t].photos[p] = { name: p, views: [], zooms: 0 };
+      if (!byTag[t].photos[p]) byTag[t].photos[p] = { name: p, views: [], zoomEvents: [], zooms: 0 };
 
       if (e.event_type === 'view') {
         byTag[t].photos[p].views.push({ at: e.visited_at, dur: 0, hasZoom: false });
@@ -774,13 +779,9 @@ function initAdmin(cfg) {
         byTag[t].totalZooms++;
         // Read zoom level: prefer zoom_pct, fall back to duration_seconds (carrier field)
         const zLevel = (e.zoom_pct > 0 ? e.zoom_pct : (e.duration_seconds > 100 ? e.duration_seconds : 0));
-        // Mark the most recent view for this photo as having a zoom
-        const vl = byTag[t].photos[p].views;
-        if (vl.length) {
-          vl[vl.length - 1].hasZoom = true;
-          if (zLevel > (vl[vl.length - 1].zoomPct || 0)) vl[vl.length - 1].zoomPct = zLevel;
-        }
-        // Track max zoom for the photo
+        // Store each zoom as its own event entry
+        byTag[t].photos[p].zoomEvents.push({ at: e.visited_at, zoomPct: zLevel });
+        // Track max zoom for the photo header
         if (zLevel > 0 && zLevel > (byTag[t].photos[p].maxZoomPct || 0)) {
           byTag[t].photos[p].maxZoomPct = zLevel;
         }
@@ -811,12 +812,20 @@ function initAdmin(cfg) {
           const totalDur = ph.views.reduce((s, v) => s + (v.dur || 0), 0);
           const zoomPct  = ph.views.length > 0 ? Math.round(ph.zooms / ph.views.length * 100) : 0;
 
+          // View session rows
           const viewRows = ph.views.map((v, vi) => `
             <div class="gl-view-row">
-              <div class="gl-view-num">${vi + 1}</div>
+              <div class="gl-view-num gl-view-type-view" title="View">👁</div>
               <span class="gl-view-time">${fmtDate(v.at, true)}</span>
-              ${v.dur > 0 ? `<span class="gl-view-dur">⏱ ${fmtDur(v.dur)}</span>` : ''}
-              ${v.zoomPct > 0 ? `<span class="gl-view-zoom">🔍 ${(v.zoomPct/100).toFixed(1)}× zoom</span>` : (v.hasZoom ? '<span class="gl-view-zoom">🔍 Zoomed</span>' : '')}
+              ${v.dur > 0 ? `<span class="gl-view-dur">⏱ ${fmtDur(v.dur)}</span>` : '<span class="gl-view-dur" style="opacity:0.4">⏱ —</span>'}
+            </div>`).join('');
+
+          // Zoom event rows — each zoom as its own line
+          const zoomRows = (ph.zoomEvents || []).map((z, zi) => `
+            <div class="gl-view-row gl-zoom-row">
+              <div class="gl-view-num gl-view-type-zoom" title="Zoom">🔍</div>
+              <span class="gl-view-time">${fmtDate(z.at, true)}</span>
+              ${z.zoomPct > 0 ? `<span class="gl-view-zoom">× ${(z.zoomPct/100).toFixed(1)} zoom</span>` : '<span class="gl-view-zoom">zoomed</span>'}
             </div>`).join('');
 
           return `<div class="gl-photo-block">
@@ -828,7 +837,7 @@ function initAdmin(cfg) {
                 ${totalDur > 0 ? `<span class="gl-meta-pill gl-meta-dur">⏱ ${fmtDur(totalDur)} total</span>` : ''}
               </div>
             </div>
-            <div class="gl-view-list">${viewRows}</div>
+            <div class="gl-view-list">${viewRows}${zoomRows}</div>
           </div>`;
         }).join('');
 
@@ -877,6 +886,7 @@ function initAdmin(cfg) {
       renderDevices(allRows);
       renderGeo(allRows);
       renderGallery(allGallery);
+      renderPhotoActivity(allGallery);
 
       document.getElementById('last-updated').textContent =
         new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
