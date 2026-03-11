@@ -333,11 +333,19 @@
 
     // ── Gallery Analytics Bridge (public API) ─────────────────
     // gallery.js calls window._galleryAnalytics.trackEvent(data)
-    // If visitId isn't set yet, events are queued and flushed
-    // automatically once the visit INSERT completes (FIX ①).
+    //
+    // On photos.html (gallery page): visitId is always null because
+    // we intentionally skip the visit INSERT. Send photo events
+    // directly — visit_id is nullable in the schema.
+    //
+    // On index.html: visitId may not be set yet when the first
+    // gallery event fires, so queue and flush once INSERT completes.
     window._galleryAnalytics = {
       trackEvent: function (data) {
-        if (visitReady && visitId) {
+        if (isGalleryPage) {
+          // Gallery page — no visitId, send directly every time
+          sendPhotoEvent(data);
+        } else if (visitReady && visitId) {
           sendPhotoEvent(data);
         } else {
           log('visitId not ready — queuing event:', data.event_type, data.photo_name);
@@ -348,13 +356,12 @@
 
     // ── Init ──────────────────────────────────────────────────
     async function init() {
-      // DOM is guaranteed ready at this point — safe to read document.body
       isGalleryPage = document.body.classList.contains('gl-page');
 
       // ── photos.html: no visit row ever ───────────────────────
       // biodata.js runs on photos.html only to expose the
       // _galleryAnalytics bridge. Photo engagement goes into
-      // photo_events, not visits. Exit before any DB write.
+      // photo_events (visit_id nullable). Exit before any DB write.
       if (isGalleryPage) {
         log('Gallery page — skipping visit insert, bridge ready.');
         return;
@@ -371,7 +378,6 @@
       if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_')) { err('supabaseUrl not set!'); return; }
       if (!SUPABASE_KEY || SUPABASE_KEY.includes('YOUR_')) { err('supabaseKey not set!'); return; }
 
-      // Run geo and GPS in parallel (GPS skipped on gallery page)
       const [geo, gps] = await Promise.all([getGeoData(), getGPSLocation()]);
 
       await insertVisit({
