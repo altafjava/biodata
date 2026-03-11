@@ -351,6 +351,23 @@
       // DOM is guaranteed ready at this point — safe to read document.body
       isGalleryPage = document.body.classList.contains('gl-page');
 
+      // ── photos.html: no visit row ever ───────────────────────
+      // biodata.js runs on photos.html only to expose the
+      // _galleryAnalytics bridge. Photo engagement goes into
+      // photo_events, not visits. Exit before any DB write.
+      if (isGalleryPage) {
+        log('Gallery page — skipping visit insert, bridge ready.');
+        return;
+      }
+
+      // ── index.html: skip if user is navigating BACK from gallery ──
+      // Clicking "< Biodata" sets referrer to photos.html — that is
+      // not a fresh visit, just back-navigation. Don't record it.
+      if (document.referrer && /photos\.html/.test(document.referrer)) {
+        log('Skipping visit — back-navigation from photos.html');
+        return;
+      }
+
       if (!SUPABASE_URL || SUPABASE_URL.includes('YOUR_')) { err('supabaseUrl not set!'); return; }
       if (!SUPABASE_KEY || SUPABASE_KEY.includes('YOUR_')) { err('supabaseKey not set!'); return; }
 
@@ -375,11 +392,8 @@
         ...gps,
       });
 
-      // Only track scroll/buttons on the biodata page
-      if (!isGalleryPage) {
-        trackScroll();
-        trackButtons();
-      }
+      trackScroll();
+      trackButtons();
       trackSessionEnd();
     }
 
