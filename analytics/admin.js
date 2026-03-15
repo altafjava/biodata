@@ -434,6 +434,7 @@ function initAdmin(cfg) {
 
       html += `<tr class="session-row${isExpanded ? ' session-expanded' : ''}" data-session="${sessionId}">
         <td class="mono muted">${idx}</td>
+        <td>${recipTag(allTags)}</td>
         <td class="mono sm">${fmtDate(latest.visited_at, true)}</td>
         <td class="mono accent">${latest.ipv4 || '—'}</td>
         <td>${location}</td>
@@ -442,7 +443,6 @@ function initAdmin(cfg) {
         <td class="mono">${fmtDur(totalDur)}</td>
         <td class="mono">${maxScroll ? maxScroll + '%' : '—'}</td>
         <td>${srcTag(bestSource)}</td>
-        <td>${recipTag(allTags)}</td>
         <td>${count > 1
           ? `<span class="tag tag-repeat expand-toggle">↩ ${count}× ${isExpanded ? '▲' : '▼'}</span>`
           : `<span class="tag tag-new">New</span>`}
@@ -481,12 +481,12 @@ function initAdmin(cfg) {
                 <div class="detail-col"><div class="dc-label">Browser</div><div class="dc-value">${latest.browser || '—'}</div></div>
                 <div class="detail-col"><div class="dc-label">Screen</div><div class="dc-value mono">${latest.screen_resolution || '—'}</div></div>
                 <div class="detail-col"><div class="dc-label">Language</div><div class="dc-value">${latest.language || '—'}</div></div>
-                ${allTags.length ? `<div class="detail-col detail-col-full"><div class="dc-label">Recipient Tag${allTags.length > 1 ? 's' : ''}</div><div class="dc-value" style="color:#4f46e5;font-weight:600">${allTags.map(t => '🏷️ ' + t).join('  ')}</div></div>` : ''}
+                <div class="detail-col"><div class="dc-label">Recipient Tag${allTags.length > 1 ? 's' : ''}</div><div class="dc-value" style="color:#4f46e5;font-weight:600">${allTags.length ? allTags.map(t => '🏷️ ' + t).join('  ') : '—'}</div></div>
+                <div class="detail-col"><div class="dc-label">Referrer</div><div class="dc-value">${latest.referrer || '—'}</div></div>
                 ${gpsRow ? `
                 <div class="detail-col"><div class="dc-label">GPS Lat/Lng</div><div class="dc-value mono">${gpsRow.gps_lat?.toFixed(5)}, ${gpsRow.gps_lng?.toFixed(5)}</div></div>
                 <div class="detail-col"><div class="dc-label">Accuracy</div><div class="dc-value mono">±${gpsRow.gps_accuracy}m</div></div>
                 ${gpsRow.gps_lat ? `<div class="detail-col detail-col-full"><a class="map-link" href="https://maps.google.com/?q=${gpsRow.gps_lat},${gpsRow.gps_lng}" target="_blank">📍 Open in Google Maps</a></div>` : ''}` : ''}
-                <div class="detail-col"><div class="dc-label">Referrer</div><div class="dc-value">${latest.referrer || '—'}</div></div>
                 <div class="detail-col detail-col-full"><div class="dc-label">Page URL</div><div class="dc-value mono small">${latest.page_url || '—'}</div></div>
               </div>
             </div>
@@ -547,6 +547,10 @@ function initAdmin(cfg) {
     });
 
     const sorted = Object.values(map).sort((a, b) => new Date(b.lastSeen) - new Date(a.lastSeen));
+
+    // Update count badge
+    const recipBadge = document.getElementById('recip-count-badge');
+    if (recipBadge) recipBadge.textContent = sorted.length;
 
     tbody.innerHTML = sorted.map((rec, i) => {
       const v          = rec.visits;
@@ -799,11 +803,11 @@ function initAdmin(cfg) {
       html += `<tr class="gl-recip-row${isExpanded ? ' expanded' : ''}" data-tag="${rec.tag}">
         <td class="mono muted">${i + 1}</td>
         <td style="font-weight:600;color:#7c3aed">🏷️ ${rec.tag}</td>
+        <td class="mono sm">${fmtDate(rec.lastSeen, true)}</td>
         <td class="mono">${photoCount} photo${photoCount !== 1 ? 's' : ''}</td>
         <td class="mono">${rec.totalViews}</td>
         <td class="mono">${rec.totalZooms > 0 ? '<span style="color:#059669;font-weight:600">' + rec.totalZooms + ' 🔍</span>' : '—'}</td>
         <td class="mono">${fmtDur(rec.totalDur)}</td>
-        <td class="mono sm">${fmtDate(rec.lastSeen, true)}</td>
       </tr>`;
 
       if (isExpanded) {
@@ -899,13 +903,28 @@ function initAdmin(cfg) {
     }
   }
 
-  // ── Search ────────────────────────────────────────────────
+  // ── Search: Visitors ─────────────────────────────────────
   document.getElementById('search-input').addEventListener('input', function () {
     const q = this.value.toLowerCase();
     renderTable(allRows.filter(r =>
       ['ipv4', 'ipv6', 'city', 'browser', 'os', 'country', 'isp', 'device_type', 'referrer', 'source', 'recipient_tag']
         .some(k => (r[k] || '').toLowerCase().includes(q))
     ));
+  });
+
+  // ── Search: Recipients ────────────────────────────────────
+  document.getElementById('recip-search-input').addEventListener('input', function () {
+    const q = this.value.toLowerCase().trim();
+    if (!q) {
+      renderRecipients(allRows, allGallery);
+      return;
+    }
+    const filtered = allRows.filter(r => r.recipient_tag && r.recipient_tag.toLowerCase().includes(q));
+    renderRecipients(filtered, allGallery);
+    // Update badge to reflect filtered count
+    const uniqueTags = new Set(filtered.map(r => r.recipient_tag).filter(Boolean)).size;
+    const badge = document.getElementById('recip-count-badge');
+    if (badge) badge.textContent = uniqueTags;
   });
 
   // ── Nav ───────────────────────────────────────────────────

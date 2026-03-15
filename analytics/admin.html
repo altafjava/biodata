@@ -64,18 +64,18 @@
             </svg>
             <span>Recipients</span>
           </a>
-          <a class="nav-item" data-section="gallery" data-label="Gallery" href="#">
-            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
-            </svg>
-            <span>Gallery</span>
-          </a>
           <a class="nav-item" data-section="photo-activity" data-label="Photo Activity" href="#">
             <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
               <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
             </svg>
             <span>Photo Activity</span>
+          </a>
+          <a class="nav-item" data-section="gallery" data-label="Gallery" href="#">
+            <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+            </svg>
+            <span>Gallery</span>
           </a>
           <div class="nav-label" style="margin-top:8px">Insights</div>
           <a class="nav-item" data-section="devices" data-label="Devices" href="#">
@@ -345,11 +345,11 @@
                   <tr>
                     <th>#</th>
                     <th>Recipient</th>
+                    <th>Last Active</th>
                     <th>Photos Viewed</th>
                     <th>Total Views</th>
                     <th>Zooms</th>
                     <th>Total Time</th>
-                    <th>Last Active</th>
                   </tr>
                 </thead>
                 <tbody id="gl-activity-tbody">
@@ -375,6 +375,7 @@
                 <thead>
                   <tr>
                     <th>#</th>
+                    <th>Recipient</th>
                     <th>Last Seen</th>
                     <th>IPv4</th>
                     <th>Location</th>
@@ -383,7 +384,6 @@
                     <th>Time Spent</th>
                     <th>Scroll</th>
                     <th>Contact</th>
-                    <th>Recipient</th>
                     <th>Visits</th>
                   </tr>
                 </thead>
@@ -403,7 +403,9 @@
             <div class="table-hdr">
               <div class="table-hdr-left">
                 <h3>Recipients Tracking</h3>
+                <span class="count-badge" id="recip-count-badge">0</span>
               </div>
+              <input id="recip-search-input" class="search-input" type="text" placeholder="🔍  Search recipient tag…" />
             </div>
             <div class="table-wrap">
               <table>
