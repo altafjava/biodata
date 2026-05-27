@@ -414,12 +414,15 @@ body.gl-page {
   top: 50%;
   transform: translateY(-50%);
   z-index: 500;
-  width: 38px;
-  height: 76px;
-  background: rgba(0,0,0,0.38);
-  border: 1px solid rgba(255,255,255,0.22);
+  width: 44px;
+  height: 88px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.55);
   color: #fff;
-  font-size: 1.6rem;
+  font-size: 2rem;
+  font-weight: 300;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,23 +430,31 @@ body.gl-page {
   outline: none;
   -webkit-tap-highlight-color: transparent;
   line-height: 1;
-  transition: background 0.18s, opacity 0.25s;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95);
+  box-shadow:
+    0 2px 20px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s, transform 0.15s;
 }
 .gl-nav-prev {
   left: 0;
-  border-radius: 0 44px 44px 0;
+  border-radius: 0 52px 52px 0;
   border-left: none;
-  padding-right: 2px;
+  padding-right: 4px;
 }
 .gl-nav-next {
   right: 0;
-  border-radius: 44px 0 0 44px;
+  border-radius: 52px 0 0 52px;
   border-right: none;
-  padding-left: 2px;
+  padding-left: 4px;
 }
-.gl-nav-btn:hover  { background: rgba(0,0,0,0.58); }
-.gl-nav-btn:active { opacity: 0.65; }
+.gl-nav-btn:hover  { background: rgba(0, 0, 0, 0.62); }
+.gl-nav-btn:active { transform: translateY(-50%) scale(0.93); }
 .gl-nav-btn[disabled] { opacity: 0; pointer-events: none; }
+
+@media (max-width: 480px) {
+  .gl-nav-btn { width: 38px; height: 76px; font-size: 1.7rem; }
+}
 
 /* ── Dots ── */
 .gl-dots {

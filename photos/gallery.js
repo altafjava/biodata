@@ -158,7 +158,7 @@
      NAVIGATE
   ════════════════════════════════════════ */
   function goToPhoto(index) {
-    if (index < 0 || index >= photos.length) return;
+    index = ((index % photos.length) + photos.length) % photos.length;
 
     fireViewEnd();
 
@@ -239,10 +239,11 @@
     });
   }
   function updateArrows(i) {
+    // All buttons always active — circular navigation
     var p = document.getElementById('gl-nav-prev');
     var n = document.getElementById('gl-nav-next');
-    if (p) p.disabled = (i === 0);
-    if (n) n.disabled = (i === photos.length - 1);
+    if (p) p.disabled = false;
+    if (n) n.disabled = false;
   }
   function updateCounter(i) {
     var c = document.getElementById('gl-counter-pill') || document.getElementById('gl-counter');
