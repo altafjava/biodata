@@ -108,6 +108,25 @@ function initAdmin(cfg) {
     throw new Error('All fetch attempts failed.');
   }
 
+  async function fetchAllPages(basePath, throwOnError) {
+    const PAGE_SIZE = 1000;
+    let all = [];
+    let offset = 0;
+    while (true) {
+      const path = `${basePath}&limit=${PAGE_SIZE}&offset=${offset}`;
+      const res = await supabaseFetch(path, { headers: {} });
+      if (!res.ok) {
+        if (throwOnError) throw new Error(`${res.status}: ${await res.text()}`);
+        break;
+      }
+      const page = await res.json();
+      all = all.concat(page);
+      if (page.length < PAGE_SIZE) break;
+      offset += PAGE_SIZE;
+    }
+    return all;
+  }
+
   async function fetchVisits(period) {
     let path = `/rest/v1/${TABLE_NAME}?select=*&order=visited_at.asc`;
     if (period === 'today') {
@@ -116,10 +135,7 @@ function initAdmin(cfg) {
     } else if (period !== 'all') {
       path += `&visited_at=gte.${new Date(Date.now() - parseInt(period) * 86400000).toISOString()}`;
     }
-    path += `&limit=5000`;
-    const res = await supabaseFetch(path, { headers: {} });
-    if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
-    return res.json();
+    return fetchAllPages(path, true);
   }
 
   async function fetchPhotoEvents(period) {
@@ -130,10 +146,7 @@ function initAdmin(cfg) {
     } else if (period !== 'all') {
       path += `&visited_at=gte.${new Date(Date.now() - parseInt(period) * 86400000).toISOString()}`;
     }
-    path += `&limit=5000`;
-    const res = await supabaseFetch(path, { headers: {} });
-    if (!res.ok) return [];
-    return res.json();
+    return fetchAllPages(path, false);
   }
 
   // ── Shared utilities ──────────────────────────────────────
