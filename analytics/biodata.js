@@ -1,18 +1,14 @@
 // ============================================================
-//  Biodata Analytics — analytics/biodata.js  v3
+//  Biodata Analytics — analytics/biodata.js  v2
 //  ALL settings in analytics/config.js
 //
+//  Key fixes in this version:
 //  ① Event queue: gallery events fired before visitId is ready
 //    are buffered and flushed once the visit INSERT completes.
-//    Queue always flushes (even on failure) so no events are lost.
 //  ② ipv4 is hoisted to module scope so the gallery bridge can
 //    include the real IP in every photo_events row.
 //  ③ GPS is skipped on photos.html — it adds 2-5 s of latency
 //    for no benefit on the gallery page.
-//  ④ photos.html now records a visit row so gallery visitors
-//    appear in Visitors / Recipients / Overview analytics.
-//  ⑤ sendPhotoEvent validates HTTP response — errors surface via
-//    console.error instead of being silently swallowed.
 // ============================================================
 (function () {
 
@@ -167,19 +163,16 @@
           body: JSON.stringify(data),
         });
         const text = await res.text();
-        if (!res.ok) {
-          err('Insert failed:', res.status, text);
-        } else {
-          const json = JSON.parse(text);
-          if (json && json[0]) {
-            visitId = json[0].id;
-            log('Inserted! ID:', visitId);
-          }
+        if (!res.ok) { err('Insert failed:', res.status, text); return; }
+        const json = JSON.parse(text);
+        if (json && json[0]) {
+          visitId = json[0].id;
+          log('Inserted! ID:', visitId);
+          // ── FIX ①: visit is ready — flush any queued gallery events ──
+          visitReady = true;
+          flushQueue();
         }
       } catch (e) { err('Network error:', e.message); }
-      // Always mark ready and flush — photo events must not be lost if visit fails
-      visitReady = true;
-      flushQueue();
     }
 
     async function updateVisit(data) {
@@ -310,7 +303,7 @@
     // ── Gallery photo_events insert (internal) ────────────────
     async function sendPhotoEvent(data) {
       try {
-        const res = await supabaseFetch('/rest/v1/photo_events', {
+        await supabaseFetch('/rest/v1/photo_events', {
           method: 'POST',
           headers: {
             'Content-Type':  'application/json',
@@ -326,33 +319,36 @@
             photo_index:      data.photo_index !== undefined ? data.photo_index : null,
             event_type:       data.event_type        || 'view',
             duration_seconds: data.duration_seconds  || 0,
-            zoom_pct:         data.zoom_pct           || 0,
+            zoom_pct:         data.zoom_pct           || 0,   // max zoom % for view_end events
             recipient_tag:    recipientTag,           // always from module scope
             device_type:      getDeviceType(),
-            ipv4:             resolvedIpv4,           // resolved by getGeoData()
+            ipv4:             resolvedIpv4,           // FIX ②: real IP, not null
           }),
         });
-        if (!res.ok) {
-          const text = await res.text();
-          err('photo_event insert failed:', res.status, text);
-          return;
-        }
         log('photo_event sent:', data.event_type, data.photo_name);
       } catch (e) {
-        err('photo_event network error:', e.message);
+        log('photo_event failed (silent):', e.message);
       }
     }
 
     // ── Gallery Analytics Bridge (public API) ─────────────────
-    // gallery.js calls window._galleryAnalytics.trackEvent(data).
-    // Events are queued until the visit INSERT completes (both on
-    // index.html and photos.html), then flushed with the visitId.
+    // gallery.js calls window._galleryAnalytics.trackEvent(data)
+    //
+    // On photos.html (gallery page): visitId is always null because
+    // we intentionally skip the visit INSERT. Send photo events
+    // directly — visit_id is nullable in the schema.
+    //
+    // On index.html: visitId may not be set yet when the first
+    // gallery event fires, so queue and flush once INSERT completes.
     window._galleryAnalytics = {
       trackEvent: function (data) {
-        if (visitReady) {
+        if (isGalleryPage) {
+          // Gallery page — no visitId, send directly every time
+          sendPhotoEvent(data);
+        } else if (visitReady && visitId) {
           sendPhotoEvent(data);
         } else {
-          log('visit not ready — queuing event:', data.event_type, data.photo_name);
+          log('visitId not ready — queuing event:', data.event_type, data.photo_name);
           eventQueue.push(data);
         }
       },
@@ -362,10 +358,19 @@
     async function init() {
       isGalleryPage = document.body.classList.contains('gl-page');
 
-      // ── Skip back-navigation from gallery to biodata ──────────
-      // Clicking "< Biodata" sets referrer to photos.html — not a
-      // fresh visit, just back-navigation. Only skip on index.html.
-      if (!isGalleryPage && document.referrer && /photos\.html/.test(document.referrer)) {
+      // ── photos.html: no visit row ever ───────────────────────
+      // biodata.js runs on photos.html only to expose the
+      // _galleryAnalytics bridge. Photo engagement goes into
+      // photo_events (visit_id nullable). Exit before any DB write.
+      if (isGalleryPage) {
+        log('Gallery page — skipping visit insert, bridge ready.');
+        return;
+      }
+
+      // ── index.html: skip if user is navigating BACK from gallery ──
+      // Clicking "< Biodata" sets referrer to photos.html — that is
+      // not a fresh visit, just back-navigation. Don't record it.
+      if (document.referrer && /photos\.html/.test(document.referrer)) {
         log('Skipping visit — back-navigation from photos.html');
         return;
       }
@@ -393,12 +398,8 @@
         ...gps,
       });
 
-      // trackScroll and trackButtons are biodata-page only
-      // trackSessionEnd runs on both pages to record total visit duration
-      if (!isGalleryPage) {
-        trackScroll();
-        trackButtons();
-      }
+      trackScroll();
+      trackButtons();
       trackSessionEnd();
     }
 

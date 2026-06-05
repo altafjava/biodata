@@ -132,11 +132,7 @@ function initAdmin(cfg) {
     }
     path += `&limit=5000`;
     const res = await supabaseFetch(path, { headers: {} });
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('[Analytics] photo_events fetch failed:', res.status, text);
-      return [];
-    }
+    if (!res.ok) return [];
     return res.json();
   }
 
