@@ -15,6 +15,11 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      /* Apply saved theme before first paint — prevents flash of light mode */
+      if (localStorage.getItem('_bd_theme') === 'dark')
+        document.documentElement.setAttribute('data-theme', 'dark');
+    </script>
     <script src="script.js" defer></script>
     <script src="analytics/config.js" defer></script>
     <script src="analytics/biodata.js" defer></script>
@@ -23,6 +28,9 @@
     <div class="container">
       <header>
         <div class="header-pattern"></div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <i class="fas fa-moon" id="theme-icon"></i>
+        </button>
         <!-- <h1>Marriage Biodata</h1> -->
         <div class="profile-header">
           <h2>Altaf Ansari</h2>
@@ -236,14 +244,14 @@
             </div>
             <div class="siblings-row">
               <div class="sibling-item">
-                <h5><i class="fas fa-female"></i> Elder Sister</h5>
+                <h5><i class="fas fa-user-tie"></i> Elder Sister</h5>
                 <p>Noor</p>
                 <p class="occupation">Govt Teacher in Bihar</p>
                 <p class="qualification">B.ED, M.A, B.A</p>
                 <p class="status"><i class="fas fa-heart"></i> Married</p>
               </div>
               <div class="sibling-item">
-                <h5><i class="fas fa-female"></i> Younger Sister</h5>
+                <h5><i class="fas fa-user-graduate"></i> Younger Sister</h5>
                 <p>Nargish</p>
                 <p class="occupation">Preparing for Government Exams</p>
                 <p class="qualification">B.ED, M.A, B.A</p>
@@ -299,11 +307,11 @@
               <span>No Drinking</span>
             </div>
             <div class="habit-item">
-              <div class="habit-icon-wrap"><i class="fas fa-ban"></i></div>
+              <div class="habit-icon-wrap"><i class="fas fa-leaf"></i></div>
               <span>No Tobacco</span>
             </div>
             <div class="habit-item">
-              <div class="habit-icon-wrap"><i class="fas fa-ban"></i></div>
+              <div class="habit-icon-wrap"><i class="fas fa-circle-xmark"></i></div>
               <span>No Gutka</span>
             </div>
           </div>
@@ -343,7 +351,7 @@
         <span class="peb-icon"><i class="fas fa-images"></i></span>
         <div class="peb-content">
           <span class="peb-text">View Photos</span>
-          <span class="peb-count" id="peb-count-text">Loading...</span>
+          <span class="peb-count" id="peb-count-text"></span>
         </div>
         <span class="peb-arrow"><i class="fas fa-chevron-right"></i></span>
       </a>

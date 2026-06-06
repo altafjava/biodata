@@ -15,8 +15,9 @@
   --card-bg: #ffffff;
   --success-color: #00c853;
   --married-color: #ff69b4;
-  --gradient-start: var(--accent-color);
-  --gradient-end: #d90e5f;
+  --gradient-start: #3730a3;
+  --gradient-mid:   #6d28d9;
+  --gradient-end:   #be185d;
   --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
@@ -44,7 +45,7 @@ body {
 
 /* Header */
 header {
-  background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+  background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
   color: white;
   padding: 25px 20px;
   text-align: center;
@@ -126,7 +127,7 @@ h1 {
   justify-content: center;
   gap: 15px;
   margin-top: 15px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .contact-link {
@@ -150,6 +151,11 @@ h1 {
   background: rgba(255,255,255,0.2);
   transform: translateY(-2px);
   color: white;
+}
+.contact-link:focus-visible,
+.social-link:focus-visible {
+  outline: 2px solid rgba(255,255,255,0.85);
+  outline-offset: 3px;
 }
 .contact-link i { font-size: 1rem; }
 
@@ -550,3 +556,87 @@ h3 i { color: var(--accent-color); font-size: 1.1rem; }
   .habits-grid { grid-template-columns: 1fr; }
   .interests-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Theme Toggle Button ─────────────────────────────────── */
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.28);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  z-index: 2;
+  transition: background 0.2s, transform 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.theme-toggle:hover  { background: rgba(255,255,255,0.28); }
+.theme-toggle:active { transform: scale(0.92); }
+.theme-toggle:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: 2px; }
+
+/* ── Smooth theme transition ─────────────────────────────── */
+body,
+.container,
+section,
+.info-item,
+.family-member,
+.sibling-item,
+.education-item,
+.family-type-card,
+.habit-item,
+.interest-item {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ── Dark Mode (manual toggle only — OS setting ignored) ─── */
+html[data-theme="dark"] {
+  --primary-color:   #818cf8;
+  --secondary-color: #93c5fd;
+  --accent-color:    #818cf8;
+  --text-color:      #cbd5e1;
+  --light-bg:        #1e2235;
+  --card-bg:         #161927;
+  --success-color:   #34d399;
+  --married-color:   #f9a8d4;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+}
+
+html[data-theme="dark"] body { background: #0d1117; }
+
+/* Section icon colors — brightened for dark backgrounds */
+html[data-theme="dark"] .personal-info h3 i        { color: #60a5fa; }
+html[data-theme="dark"] .religious-profile h3 i    { color: #4ade80; }
+html[data-theme="dark"] .professional-details h3 i { color: #fb923c; }
+html[data-theme="dark"] .academic-profile h3 i     { color: #c084fc; }
+html[data-theme="dark"] .family-background h3 i    { color: #2dd4bf; }
+html[data-theme="dark"] .partner-expectations h3 i { color: #f472b6; }
+html[data-theme="dark"] .lifestyle h3 i            { color: #fbbf24; }
+
+/* Family type card icons */
+html[data-theme="dark"] .ftc-green  { background: #1a2e24; color: #6ee7b7; }
+html[data-theme="dark"] .ftc-purple { background: #25193d; color: #c4b5fd; }
+
+/* Habit items */
+html[data-theme="dark"] .habit-item       { background: #1a2e24; border-color: #2d4a35; color: #a7f3d0; }
+html[data-theme="dark"] .habit-icon-wrap  { background: #2d4a35; }
+html[data-theme="dark"] .habit-icon-wrap i { color: #6ee7b7; }
+
+/* Interest icon wraps */
+html[data-theme="dark"] .interest-blue   { background: #1e3050; color: #93c5fd; }
+html[data-theme="dark"] .interest-green  { background: #1a2e24; color: #86efac; }
+html[data-theme="dark"] .interest-indigo { background: #1e2250; color: #a5b4fc; }
+html[data-theme="dark"] .interest-orange { background: #2c1e0e; color: #fdba74; }
+html[data-theme="dark"] .interest-pink   { background: #2c1523; color: #f9a8d4; }
+html[data-theme="dark"] .interest-teal   { background: #0e251f; color: #5eead4; }
+
+/* Hardcoded text colors */
+html[data-theme="dark"] .occupation,
+html[data-theme="dark"] .sibling-item .occupation,
+html[data-theme="dark"] .qualification { color: #93c5fd; }

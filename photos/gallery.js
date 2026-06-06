@@ -88,6 +88,16 @@
       if (ct) ct.textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
       if (hash) banner.href = 'photos.html#' + hash;
       banner.style.display = 'flex';
+
+      /* Hide FAB while the banner is visible — no competing CTAs on screen */
+      if (fab && window.IntersectionObserver) {
+        var fabRipple = document.querySelector('.gallery-fab-ripple');
+        new IntersectionObserver(function (entries) {
+          var bannerVisible = entries[0].isIntersecting;
+          fab.classList.toggle('fab-hidden-by-banner', bannerVisible);
+          if (fabRipple) fabRipple.classList.toggle('fab-hidden-by-banner', bannerVisible);
+        }, { threshold: 0.2 }).observe(banner);
+      }
     }
   }
 

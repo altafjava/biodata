@@ -1,3 +1,31 @@
+// ── Dark mode toggle ──────────────────────────────────────
+(function () {
+  var THEME_KEY = '_bd_theme';
+  var btn  = document.getElementById('theme-toggle');
+  var icon = document.getElementById('theme-icon');
+
+  function applyTheme(dark) {
+    if (dark) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      icon.className = 'fas fa-sun';
+      localStorage.setItem(THEME_KEY, 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      icon.className = 'fas fa-moon';
+      localStorage.setItem(THEME_KEY, 'light');
+    }
+  }
+
+  /* Sync icon with the theme that was already applied by the inline script */
+  if (document.documentElement.getAttribute('data-theme') === 'dark') {
+    icon.className = 'fas fa-sun';
+  }
+
+  btn.addEventListener('click', function () {
+    applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+  });
+})();
+
 function openWhatsApp(event) {
   const phone = "918341949651";
   const message = "Hi, I just viewed your biodata at https://altafjava.github.io/biodata/. I'd like to connect and learn more if you're open to it.";
