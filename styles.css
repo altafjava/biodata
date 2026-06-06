@@ -561,7 +561,7 @@ h3 i { color: var(--accent-color); font-size: 1.1rem; }
 .theme-toggle {
   position: absolute;
   top: 14px;
-  right: 14px;
+  left: 14px;
   width: 34px;
   height: 34px;
   border-radius: 50%;
