@@ -86,7 +86,6 @@
     if (banner) {
       var ct = document.getElementById('peb-count-text');
       if (ct) ct.textContent = photos.length + ' photo' + (photos.length !== 1 ? 's' : '');
-      var hash = window.location.hash.replace('#', '');
       if (hash) banner.href = 'photos.html#' + hash;
       banner.style.display = 'flex';
     }
