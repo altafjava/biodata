@@ -193,6 +193,21 @@
 
     // ── Geo + IPv4 + IPv6 ─────────────────────────────────────
     async function getGeoData() {
+      const CACHE_KEY = '_bd_geo';
+      const CACHE_TTL = 86400000; // 24 hours
+
+      try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < CACHE_TTL) {
+            log('Geo data from cache');
+            resolvedIpv4 = data.ipv4 || null;
+            return data;
+          }
+        }
+      } catch (e) { /* localStorage unavailable or entry corrupted */ }
+
       log('Fetching IP geo…');
       let ipv4 = null, ipv6 = null, geo = {};
 
@@ -225,10 +240,14 @@
         }
       } catch (e) { log('ipapi.co failed:', e.message); }
 
-      // ── FIX ②: hoist resolved ipv4 to module scope ──
       resolvedIpv4 = ipv4;
+      const result = { ipv4, ipv6, ...geo };
 
-      return { ipv4, ipv6, ...geo };
+      try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({ data: result, ts: Date.now() }));
+      } catch (e) { /* storage full or unavailable */ }
+
+      return result;
     }
 
     // ── GPS Location (only on biodata page) ───────────────────
