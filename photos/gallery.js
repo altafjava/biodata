@@ -154,6 +154,8 @@
   }
 
   function showHint() {
+    if (sessionStorage.getItem('_gl_hint')) return;
+    sessionStorage.setItem('_gl_hint', '1');
     var old = document.querySelector('.gl-hint');
     if (old) old.remove();
     var h = document.createElement('div');

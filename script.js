@@ -28,7 +28,9 @@
 
 function openWhatsApp(event) {
   const phone = "918341949651";
-  const message = "Hi, I just viewed your biodata at https://altafjava.github.io/biodata/. I'd like to connect and learn more if you're open to it.";
+  const hash = window.location.hash; // e.g. "#nafisha" — empty string if no tag
+  const pageUrl = "https://altafjava.github.io/biodata/" + hash;
+  const message = `Hi, I just viewed your biodata at ${pageUrl}. I'd like to connect and learn more if you're open to it.`;
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   window.open(url, "_blank");
   event.preventDefault();

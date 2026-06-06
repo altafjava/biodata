@@ -108,10 +108,11 @@ function initAdmin(cfg) {
     throw new Error('All fetch attempts failed.');
   }
 
-  async function fetchAllPages(basePath, throwOnError) {
+  async function fetchAllPages(basePath, throwOnError, onProgress) {
     const PAGE_SIZE = 1000;
     let all = [];
     let offset = 0;
+    let pageNum = 1;
     while (true) {
       const path = `${basePath}&limit=${PAGE_SIZE}&offset=${offset}`;
       const res = await supabaseFetch(path, { headers: {} });
@@ -121,13 +122,15 @@ function initAdmin(cfg) {
       }
       const page = await res.json();
       all = all.concat(page);
+      if (onProgress) onProgress(pageNum, all.length);
       if (page.length < PAGE_SIZE) break;
       offset += PAGE_SIZE;
+      pageNum++;
     }
     return all;
   }
 
-  async function fetchVisits(period) {
+  async function fetchVisits(period, onProgress) {
     let path = `/rest/v1/${TABLE_NAME}?select=*&order=visited_at.asc`;
     if (period === 'today') {
       const t = new Date(); t.setHours(0, 0, 0, 0);
@@ -135,10 +138,10 @@ function initAdmin(cfg) {
     } else if (period !== 'all') {
       path += `&visited_at=gte.${new Date(Date.now() - parseInt(period) * 86400000).toISOString()}`;
     }
-    return fetchAllPages(path, true);
+    return fetchAllPages(path, true, onProgress);
   }
 
-  async function fetchPhotoEvents(period) {
+  async function fetchPhotoEvents(period, onProgress) {
     let path = `/rest/v1/photo_events?select=*&order=visited_at.asc`;
     if (period === 'today') {
       const t = new Date(); t.setHours(0, 0, 0, 0);
@@ -146,7 +149,7 @@ function initAdmin(cfg) {
     } else if (period !== 'all') {
       path += `&visited_at=gte.${new Date(Date.now() - parseInt(period) * 86400000).toISOString()}`;
     }
-    return fetchAllPages(path, false);
+    return fetchAllPages(path, false, onProgress);
   }
 
   // ── Shared utilities ──────────────────────────────────────
@@ -446,17 +449,17 @@ function initAdmin(cfg) {
       const allTags = [...new Set(sessionRows.map(r => r.recipient_tag).filter(Boolean))];
 
       html += `<tr class="session-row${isExpanded ? ' session-expanded' : ''}" data-session="${sessionId}">
-        <td class="mono muted">${idx}</td>
-        <td>${recipTag(allTags)}</td>
-        <td class="mono sm">${fmtDate(latest.visited_at, true)}</td>
-        <td class="mono accent">${latest.ipv4 || '—'}</td>
-        <td>${location}</td>
-        <td>${deviceTag(latest.device_type)}</td>
-        <td>${latest.browser || '—'}</td>
-        <td class="mono">${fmtDur(totalDur)}</td>
-        <td class="mono">${maxScroll ? maxScroll + '%' : '—'}</td>
-        <td>${srcTag(bestSource)}</td>
-        <td>${count > 1
+        <td class="mono muted" data-label="#">${idx}</td>
+        <td data-label="Recipient">${recipTag(allTags)}</td>
+        <td class="mono sm" data-label="Last Seen">${fmtDate(latest.visited_at, true)}</td>
+        <td class="mono accent" data-label="IPv4">${latest.ipv4 || '—'}</td>
+        <td data-label="Location">${location}</td>
+        <td data-label="Device">${deviceTag(latest.device_type)}</td>
+        <td data-label="Browser">${latest.browser || '—'}</td>
+        <td class="mono" data-label="Time Spent">${fmtDur(totalDur)}</td>
+        <td class="mono" data-label="Scroll">${maxScroll ? maxScroll + '%' : '—'}</td>
+        <td data-label="Contact">${srcTag(bestSource)}</td>
+        <td data-label="Visits">${count > 1
           ? `<span class="tag tag-repeat expand-toggle">↩ ${count}× ${isExpanded ? '▲' : '▼'}</span>`
           : `<span class="tag tag-new">New</span>`}
         </td>
@@ -588,16 +591,16 @@ function initAdmin(cfg) {
         ? `<span class="mono" style="font-size:11px">${fmtDur(avgPhotoT)}</span>`
         : '<span class="muted" style="font-size:11px">—</span>';
 
-      return `<tr>
-        <td class="mono muted">${i + 1}</td>
-        <td style="font-weight:600;color:#4f46e5">🏷️ ${rec.tag}</td>
-        <td class="mono">${v.length} <span class="muted">(${sessions} session${sessions > 1 ? 's' : ''})</span></td>
-        <td class="mono sm">${fmtDate(rec.firstSeen, true)}</td>
-        <td class="mono sm">${fmtDate(rec.lastSeen, true)}</td>
-        <td class="mono">${maxScroll ? maxScroll + '%' : '—'} · ${fmtDur(Math.round(totalDur / v.length))}</td>
-        <td>${pvCell}</td>
-        <td>${avgPhotoCell}</td>
-        <td>${src}</td>
+      return `<tr class="recip-row">
+        <td class="mono muted" data-label="#">${i + 1}</td>
+        <td style="font-weight:600;color:#4f46e5" data-label="Recipient">🏷️ ${rec.tag}</td>
+        <td class="mono" data-label="Visits">${v.length} <span class="muted">(${sessions} session${sessions > 1 ? 's' : ''})</span></td>
+        <td class="mono sm" data-label="First Seen">${fmtDate(rec.firstSeen, true)}</td>
+        <td class="mono sm" data-label="Last Seen">${fmtDate(rec.lastSeen, true)}</td>
+        <td class="mono" data-label="Scroll·Time">${maxScroll ? maxScroll + '%' : '—'} · ${fmtDur(Math.round(totalDur / v.length))}</td>
+        <td data-label="Photos">${pvCell}</td>
+        <td data-label="Photo Time">${avgPhotoCell}</td>
+        <td data-label="Via">${src}</td>
       </tr>`;
     }).join('');
   }
@@ -878,21 +881,36 @@ function initAdmin(cfg) {
     });
   }
 
+  // ── Load progress helpers ─────────────────────────────────
+  function showProgress(msg) {
+    const bar = document.getElementById('fetch-progress');
+    const txt = document.getElementById('fetch-progress-text');
+    if (bar) bar.classList.remove('hidden');
+    if (txt) txt.textContent = msg;
+  }
+  function hideProgress() {
+    const el = document.getElementById('fetch-progress');
+    if (el) el.classList.add('hidden');
+  }
+
   // ── Load ──────────────────────────────────────────────────
   let allRows    = [];
   let allGallery = [];
 
   async function loadData() {
     const period = document.getElementById('date-filter').value;
+    showProgress('Loading…');
     document.getElementById('visits-tbody').innerHTML =
       '<tr><td colspan="11" class="empty-cell">⏳ Loading…</td></tr>';
     try {
       const [visits, gallery] = await Promise.all([
-        fetchVisits(period),
+        fetchVisits(period, (page, total) => {
+          if (page > 1) showProgress(`Fetching visits — page ${page} · ${total} rows loaded…`);
+        }),
         fetchPhotoEvents(period),
       ]);
-      allRows    = visits;
-      allGallery = gallery;
+      allRows    = visits.filter(r => !String(r.session_id || '').startsWith('_debug_'));
+      allGallery = gallery.filter(r => !String(r.session_id || '').startsWith('_debug_'));
 
       expandedSessions.clear();
       // FIX ①: pass gallery to overview so photo KPIs populate
@@ -907,7 +925,9 @@ function initAdmin(cfg) {
 
       document.getElementById('last-updated').textContent =
         new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+      hideProgress();
     } catch (e) {
+      hideProgress();
       document.getElementById('visits-tbody').innerHTML =
         `<tr><td colspan="11" class="empty-cell" style="color:#e11d48">
           <strong>${e.message}</strong><br>

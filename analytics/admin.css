@@ -222,6 +222,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14
 }
 .date-select:focus{border-color:var(--indigo)}
 
+/* ── FETCH PROGRESS BAR ── */
+.fetch-progress{
+  padding:7px 28px;
+  background:var(--indigo-l);
+  border-bottom:1px solid #c7d2fe;
+  display:flex;align-items:center;gap:9px;
+  font-size:12px;color:var(--indigo);font-weight:500;
+}
+.fp-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--indigo);flex-shrink:0;
+  animation:fetching 0.7s ease-in-out infinite alternate;
+}
+@keyframes fetching{to{opacity:0.25;transform:scale(0.65)}}
+
 /* ── SECTIONS ── */
 .section{display:none;flex-direction:column;gap:20px;padding:24px 28px;animation:fadein 0.25s ease}
 .section.active{display:flex}
@@ -543,3 +558,79 @@ tbody td{padding:11px 14px;max-width:160px;overflow:hidden;text-overflow:ellipsi
 
 /* ── tag-recip (inline style in html) ── */
 .tag-recip{background:#ede9fe;color:#6d28d9;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+
+/* ── Mobile card view: Visitors + Recipients (≤600px) ── */
+@media(max-width:600px){
+  #section-visitors .table-wrap,
+  #section-recipients .table-wrap{overflow-x:visible}
+  #section-visitors table,
+  #section-recipients table{display:block;white-space:normal}
+  #section-visitors thead,
+  #section-recipients thead{display:none}
+  #section-visitors tbody,
+  #section-recipients tbody{display:flex;flex-direction:column;gap:8px;padding:8px}
+
+  /* Session + recipient rows → 2-column cards */
+  #section-visitors .session-row,
+  #section-recipients .recip-row{
+    display:grid!important;
+    grid-template-columns:1fr 1fr;
+    border:1px solid var(--border)!important;
+    border-radius:10px;
+    padding:10px 12px;
+    background:var(--surface);
+    cursor:pointer;
+  }
+  #section-visitors .session-row td,
+  #section-recipients .recip-row td{
+    display:flex;flex-direction:column;gap:2px;
+    padding:5px 6px!important;
+    max-width:100%!important;white-space:normal!important;
+    overflow:hidden;border:none!important;font-size:12px;
+  }
+  #section-visitors .session-row td[data-label]::before,
+  #section-recipients .recip-row td[data-label]::before{
+    content:attr(data-label);
+    font-size:9px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:0.08em;font-weight:700;
+    display:block;margin-bottom:1px;
+  }
+  /* Full-width cells */
+  #section-visitors .session-row td[data-label="Recipient"],
+  #section-visitors .session-row td[data-label="Visits"]{grid-column:span 2}
+  #section-recipients .recip-row td[data-label="Recipient"],
+  #section-recipients .recip-row td[data-label="Photos"]{grid-column:span 2}
+  /* Hide less critical cols */
+  #section-visitors .session-row td[data-label="#"],
+  #section-visitors .session-row td[data-label="IPv4"],
+  #section-visitors .session-row td[data-label="Scroll"]{display:none}
+  #section-recipients .recip-row td[data-label="#"],
+  #section-recipients .recip-row td[data-label="Photo Time"]{display:none}
+
+  /* Detail expand rows: full-width block, unchanged layout */
+  #section-visitors .detail-row{
+    display:block!important;
+    border:none!important;border-radius:0!important;
+    padding:0!important;background:none!important;
+  }
+  #section-visitors .detail-row td{
+    display:block!important;
+    max-width:100%!important;padding:0!important;white-space:normal!important;
+  }
+  #section-visitors .detail-row td::before{display:none!important}
+
+  /* Empty-state rows */
+  #section-visitors tbody tr:not(.session-row):not(.detail-row),
+  #section-recipients tbody tr:not(.recip-row){
+    display:block;
+    border:1px solid var(--border);border-radius:10px;
+    padding:12px;background:var(--surface);
+  }
+  #section-visitors tbody tr:not(.session-row):not(.detail-row) td,
+  #section-recipients tbody tr:not(.recip-row) td{
+    display:block;max-width:100%!important;
+    padding:0!important;white-space:normal!important;border:none!important;
+  }
+  #section-visitors tbody tr:not(.session-row):not(.detail-row) td::before,
+  #section-recipients tbody tr:not(.recip-row) td::before{display:none}
+}
