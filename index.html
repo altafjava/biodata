@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Biodata</title>
+  <script>
+    // Preserves path + hash, strips the /biodata prefix
+    const segments = window.location.pathname.split('/');
+    const subPath = segments.slice(2).filter(Boolean).join('/');
+    const hash = window.location.hash;
+    const search = window.location.search;
+    window.location.replace(
+      'https://altaf-biodata.vercel.app/' + subPath + search + hash
+    );
+  </script>
+</head>
+<body>Redirecting...</body>
+</html>
